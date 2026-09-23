@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fillViewport="true">
+
+    <com.google.android.material.card.MaterialCardView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        app:cardCornerRadius="28dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="?attr/colorOutline">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="24dp">
+
+            <TextView
+                android:id="@+id/text_bookmark_reference"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                tools:text="Genesis 1:1" />
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="I bookmark chhan ziak rawh (Optional)..."
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/edit_bookmark_note"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top"
+                    android:minLines="2"
+                    android:inputType="textMultiLine" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <TextView
+                android:id="@+id/textColorLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="Bookmark Color"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:alpha="0.6" />
+
+            <LinearLayout
+                android:id="@+id/layoutColorSelection"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginTop="12dp"
+                android:gravity="center">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/colorRed"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_margin="6dp"
+                    app:cardCornerRadius="18dp"
+                    app:cardBackgroundColor="#FF5252"
+                    app:strokeWidth="2dp"
+                    app:strokeColor="#00000000" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/colorBlue"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_margin="6dp"
+                    app:cardCornerRadius="18dp"
+                    app:cardBackgroundColor="#448AFF"
+                    app:strokeWidth="2dp"
+                    app:strokeColor="#00000000" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/colorGreen"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_margin="6dp"
+                    app:cardCornerRadius="18dp"
+                    app:cardBackgroundColor="#4CAF50"
+                    app:strokeWidth="2dp"
+                    app:strokeColor="#00000000" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/colorYellow"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_margin="6dp"
+                    app:cardCornerRadius="18dp"
+                    app:cardBackgroundColor="#FFD740"
+                    app:strokeWidth="2dp"
+                    app:strokeColor="#00000000" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/colorPurple"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_margin="6dp"
+                    app:cardCornerRadius="18dp"
+                    app:cardBackgroundColor="#9C27B0"
+                    app:strokeWidth="2dp"
+                    app:strokeColor="#00000000" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:gravity="end"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnCancel"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Cancel" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnSave"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="Save" />
+            </LinearLayout>
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</androidx.core.widget.NestedScrollView>

@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@android:color/transparent">
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:fillViewport="true"
+        app:layout_constraintWidth_max="600dp"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_dialog_rounded"
+            android:paddingBottom="32dp">
+
+            <View
+                android:id="@+id/dialogHandle"
+                android:layout_width="40dp"
+                android:layout_height="4dp"
+                android:layout_marginTop="12dp"
+                android:background="?attr/colorOnSurface"
+                android:alpha="0.2"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <ImageButton
+                android:id="@+id/btnClose"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
+                android:layout_margin="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_close_24"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:tint="?attr/colorOnSurface" />
+
+            <TextView
+                android:id="@+id/textTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:text="Bung leh Chang thlang rawh"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                app:layout_constraintBottom_toBottomOf="@id/btnClose"
+                app:layout_constraintStart_toEndOf="@id/btnClose"
+                app:layout_constraintTop_toTopOf="@id/btnClose" />
+
+            <LinearLayout
+                android:id="@+id/layoutTestamentFilter"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:layout_marginHorizontal="24dp"
+                android:gravity="center"
+                android:orientation="horizontal"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/btnClose">
+
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/cbOldTestament"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    app:buttonTint="#FF9800"
+                    app:useMaterialThemeColors="false"
+                    android:text="Thuthlung Hlui" />
+
+                <Space
+                    android:layout_width="20dp"
+                    android:layout_height="wrap_content" />
+
+                <com.google.android.material.checkbox.MaterialCheckBox
+                    android:id="@+id/cbNewTestament"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:checked="true"
+                    app:buttonTint="#4CAF50"
+                    app:useMaterialThemeColors="false"
+                    android:text="Thuthlung Thar" />
+            </LinearLayout>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/layoutBookSelector"
+                android:layout_width="0dp"
+                android:layout_height="52dp"
+                android:layout_marginTop="12dp"
+                android:layout_marginHorizontal="24dp"
+                app:cardCornerRadius="26dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
+                app:strokeWidth="0dp"
+                android:clickable="true"
+                android:focusable="true"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/layoutTestamentFilter">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="24dp"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/textSelectedBook"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="16sp"
+                        tools:text="Genesis" />
+
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_chevron_right_24"
+                        app:tint="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <LinearLayout
+                android:id="@+id/layoutSelectionDisplay"
+                android:layout_width="160dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:orientation="horizontal"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/layoutBookSelector">
+
+                <LinearLayout
+                    android:id="@+id/layoutChapterBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="12dp"
+                    android:paddingVertical="12dp"
+                    android:background="@drawable/bg_selection_box"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Bung"
+                        android:textColor="?attr/colorOnSurface"
+                        android:alpha="0.7"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/textSelectedChapter"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        tools:text="1" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/layoutVerseBox"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:paddingVertical="12dp"
+                    android:background="@drawable/bg_selection_box"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:clickable="true"
+                    android:focusable="true">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Chang"
+                        android:textColor="?attr/colorOnSurface"
+                        android:alpha="0.7"
+                        android:textSize="11sp" />
+
+                    <TextView
+                        android:id="@+id/textSelectedVerse"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="24sp"
+                        android:textStyle="bold"
+                        tools:text="1" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TableLayout
+                android:id="@+id/keypad"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="24dp"
+                android:layout_marginTop="16dp"
+                android:stretchColumns="0,1,2"
+                app:layout_constraintTop_toBottomOf="@id/layoutSelectionDisplay">
+
+                <TableRow>
+                    <Button android:id="@+id/btn1" style="@style/Widget.MaterialComponents.Button.TextButton" android:text="1" android:textSize="22sp" android:textColor="?attr/colorOnSurface" />
+                    <Button android:id="@+id/btn2" style="@style/Widget.MaterialComponents.Button.TextButton" android:text="2" android:textSize="22sp" android:textColor="?attr/colorOnSurface" />
+                    <Button android:id="@+id/btn3" style="@style/Widget.MaterialComponents.Button.TextButton" android:text="3" android:textSize="22sp" android:textColor="?attr/colorOnSurface" />
+                </TableRow>
+
+                <TableRow>
+                    <Button android:id="@+id/btn4" style="@style/Widget.MaterialComponents.Button.TextButton" android:text="4" android:textSize="22sp" android:textColor="?attr/colorOnSurface" />
+                    <Button android:id="@+id/btn5" style="@style/Widget.MaterialComponents.Button.TextButton" android:text="5" android:textSize="22sp" android:textColor="?attr/colorOnSurface" />
+                    <Button android:id="@+id/btn6" style="@style/Widget.MaterialComponents.Button.TextButton" android:text="6" android:textSize="22sp" android:textColor="?attr/colorOnSurface" />
+                </TableRow>
+
+                <TableRow>
+                    <Button android:id="@+id/btn7" style="@style/Widget.MaterialComponents.Button.TextButton" android:text="7" android:textSize="22sp" android:textColor="?attr/colorOnSurface" />
+                    <Button android:id="@+id/btn8" style="@style/Widget.MaterialComponents.Button.TextButton" android:text="8" android:textSize="22sp" android:textColor="?attr/colorOnSurface" />
+                    <Button android:id="@+id/btn9" style="@style/Widget.MaterialComponents.Button.TextButton" android:text="9" android:textSize="22sp" android:textColor="?attr/colorOnSurface" />
+                </TableRow>
+
+                <TableRow>
+                    <ImageButton android:id="@+id/btnBackspace" style="@style/Widget.MaterialComponents.Button.TextButton" android:src="@drawable/ic_backspace_24" app:tint="#007BFF" android:layout_height="match_parent" android:layout_width="match_parent"
+                        android:contentDescription="Backspace" />
+                    <Button android:id="@+id/btn0" style="@style/Widget.MaterialComponents.Button.TextButton" android:text="0" android:textSize="22sp" android:textColor="?attr/colorOnSurface" />
+                    <Button android:id="@+id/btnOk" style="@style/Widget.MaterialComponents.Button.TextButton" android:text="OK" android:textSize="18sp" android:textColor="#007BFF" />
+                </TableRow>
+            </TableLayout>
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.core.widget.NestedScrollView>
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -1,0 +1,54 @@
+Thil i hmuh tur te:
+1.
+Premium Activation: Profile (You) tab-ah khan i email/ID ziahna lai kha i hmet ang a, tichuan "Enter Premium Key" tih a rawn lang ang. MGB-PREMIUM-2025 tih i chhut luh chuan Premium chu a "Activate" nghal ang a, i hming hnuah khan "Mizo Go Bible Premium Member ✨" tih a rawn lang tawh ang.
+2.
+Limit Check: Bible-ah Pin/Note/Bookmark i dah dawn apiangin 10 a tling tawh em tih a check tawh ang. 10 a tlin tawh chuan Upgrade dialog a rawn lang ang a, Premium i neih hma chuan 10 aia tam a dah tir tawh lo ang che.
+
+Engtin nge a hna a thawh ang?
+1.
+Admin Login: Nangmah (zlphoto02@gmail.com) i login veleh i email ziahna kha "Logged in as Admin 👑" tiin a inthlak ang.
+2.
+Admin Panel: Kha i hming/email ziahna kha i hmet ang a, Dialog a rawn in-hawng ang.
+3.
+Activate User: User-te email kha i thun ang a, "Activate" i hmeh khan Firestore cloud database-ah khan an Premium status i va 'On' sak tawp thei tawh dawn a ni.
+4.
+Auto-Activation: User dangte kha an login veleh, cloud atangin an Premium status a rawn check ang a, an activate tawh a nih chuan local-ah pawh limit a rawn bo nghal vek tawh ang.
+
+Key siam dan leh payment lak dan hi a hautak lo zawngin heti hian i ti thei ang:
+1. Payment Lak Dan (How they pay)
+Mizoram a nih avangin UPI (GPay, PhonePe, Paytm) hman hi a awlsam ber a.
+•
+Anni'n Upgrade dialog-a "Upgrade" button an hmehin i WhatsApp-ah khan a direct nghal thei ang (About-a kan siam tawh ang khan).
+•
+WhatsApp-ah khan i GPay QR code emaw i UPI ID (entirnan: 7005623762@paytm) i thawn ang.
+•
+An pay zawh hnuah Screen shot an rawn thawn ang che a, tichuan Key i pe chauh ang.
+2. Key Generate Dan (How to generate keys)
+Unique key (mi tin tana hrang vek) siam i duh chuan a hnuaia kawng hnih hi a awm:
+A. Manual (A awlsam ber): I duh duh hawrawp leh nambar hmangin i siam tawp thei. Entirnan:
+•
+MGB-ZOL-001
+•
+MGB-KHA-992 He key hi i duh zat zat i siam ang a, mahse i code-ah khan i dah vek (Hardcode) a ngai ang. Mahse hei chu a hnuah thlak a buaithlak deuh.
+B. Unique per User (Professional deuh zawk): I user-te kha an Email emaw an UID (Firebase ID) hmangin key i generate sak thei. Entirnan, an email hmasa ber nambar nen i zawm (combine) thei ang.
+3. Key set dan tur (Logic tlem thlak a ngai)
+Tuna kan logic hman mek MGB-PREMIUM-2025 hi chu mi zawng zawng tan a inang vek a, mi pakhatin a hriat chuan midang a hrilh ve thei tihna a ni.
+I duh zawk chuan heti hian kan ti thei: An pay zawh hnuah, Firebase Console-ah i kal ang a, kha user Firestore record-ah khan isPremium = true i va tih sak tawp thei. Tichuan Key chhut luh pawh a ngai lo ang a, a rawn activate nghal mai ang. Hei hi a 'Safe' ber a ni.
+Heti hian i duh em?
+1.
+User-in an pay hnuah an Email an rawn hrilh che ang.
+2.
+Nangman Firebase-ah i 'On' sak tawp ang.
+3.
+App an hawn leh veleh Premium an ni nghal ang.
+
+Thil thar awm te:
+1.
+Activate Premium Button: Profile (You) tab-ah khan i hming leh Email hnuai chiahah "Activate Premium Key" button mawi tak ka dah a ni.
+2.
+Logic:
+◦
+User-in he button hi a hmeh khan Key thun luhna Dialog a rawn in-hawng ang.
+◦
+Premium a nih tawh chuan he button hi a lo in-thup (hide) tawh ang a, a aiah "Premium Member ✨" tih kha a rawn lang tawh ang.
+Heti hian user-te tan a hma aia hman a nuam zawk tawh ang. Tuna i app i run leh huan, Profile tab-ah khan kha button thar kha hmuh tur a awm tawh ang.

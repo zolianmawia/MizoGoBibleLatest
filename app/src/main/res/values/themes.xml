@@ -1,0 +1,67 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme with Material3. -->
+    <style name="Theme.MizoGoBible" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- App primary colors -->
+        <item name="colorPrimary">@color/bible_blue</item>
+        <item name="colorOnPrimary">@color/white</item>
+        
+        <!-- Earthy Background (Paper/Sepia feel) -->
+        <item name="android:windowBackground">#FAF7F0</item>
+        <item name="colorSurface">#FAF7F0</item>
+        <item name="colorOnSurface">#201A1B</item>
+        <item name="colorSurfaceVariant">#EBE2CF</item>
+        
+        <!-- Status bar and Navigation Bar -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
+
+        <!-- Material3 Specific -->
+        <item name="colorPrimaryContainer">#D3E4FF</item>
+        <item name="colorOnPrimaryContainer">#001C38</item>
+        <item name="colorSecondaryContainer">#EBE2CF</item>
+        <item name="colorOnSecondaryContainer">#1A1C1E</item>
+        
+        <item name="elevationOverlayEnabled">false</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar" parent="Theme.MizoGoBible">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <!-- Bottom Sheet style -->
+    <style name="Theme.MizoGoBible.BottomSheet" parent="Theme.Material3.DayNight.BottomSheetDialog">
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackground">@android:color/transparent</item>
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.5</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+
+    <!-- Top Sheet / Search Dialog style - Now inherits directly from App Theme -->
+    <style name="Theme.MizoGoBible.TopSheet" parent="Theme.MizoGoBible">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.4</item>
+        <item name="android:windowAnimationStyle">@style/Animation.TopSheet</item>
+        <!-- Transparent window bg to let our layout background show -->
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="Animation.TopSheet" parent="android:Animation">
+        <item name="android:windowEnterAnimation">@anim/slide_in_top</item>
+        <item name="android:windowExitAnimation">@anim/slide_out_top</item>
+    </style>
+
+    <!-- Overlay fixed: Using Light for default theme -->
+    <style name="Theme.MizoGoBible.AppBarOverlay" parent="ThemeOverlay.Material3.Light" />
+    <style name="Theme.MizoGoBible.PopupOverlay" parent="ThemeOverlay.Material3.Light" />
+</resources>

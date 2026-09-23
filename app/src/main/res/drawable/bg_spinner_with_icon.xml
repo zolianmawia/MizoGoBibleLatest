@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Background box -->
+    <item>
+        <shape>
+            <solid android:color="?attr/colorSurfaceVariant" />
+            <corners android:radius="28dp" />
+        </shape>
+    </item>
+
+    <!-- Spinner Icon (Bitmap aiah item drawable kan hmang tawh ang) -->
+    <item
+        android:drawable="@drawable/ic_chevron_right_24"
+        android:gravity="end|center_vertical"
+        android:right="16dp"
+        android:width="20dp"
+        android:height="20dp"
+        android:tint="?attr/colorOnSurfaceVariant" />
+</layer-list>

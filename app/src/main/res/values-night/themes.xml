@@ -1,0 +1,44 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Dark Mode Theme (Earthy/Dark Brown tones) -->
+    <style name="Theme.MizoGoBible" parent="Theme.Material3.Dark.NoActionBar">
+        <!-- Main colors -->
+        <item name="colorPrimary">#D3E4FF</item>
+        <item name="colorOnPrimary">#00315C</item>
+
+        <!-- Dark Earthy Background -->
+        <item name="android:windowBackground">#1C1B17</item>
+        <item name="colorSurface">#1C1B17</item>
+        <item name="colorOnSurface">#FAF7F0</item>
+
+        <!-- Dark Earthy Variant for Search bar/containers -->
+        <item name="colorSurfaceVariant">#2D2B24</item>
+        <item name="colorOnSurfaceVariant">#C3C7D0</item>
+
+        <item name="colorSecondaryContainer">#1d1b20</item>
+        <item name="colorOnSecondaryContainer">#EBE2CF</item>
+
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">false</item>
+
+        <item name="elevationOverlayEnabled">false</item>
+    </style>
+
+    <!-- Top Sheet Dialog style - Fully Sync with Dark Earthy Theme -->
+    <style name="Theme.MizoGoBible.TopSheet" parent="Theme.MizoGoBible">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:backgroundDimEnabled">true</item>
+        <item name="android:backgroundDimAmount">0.5</item>
+        <item name="android:windowAnimationStyle">@style/Animation.TopSheet</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <!-- Overlay fixed: Using Dark for Night theme -->
+    <style name="Theme.MizoGoBible.AppBarOverlay" parent="ThemeOverlay.Material3.Dark" />
+    <style name="Theme.MizoGoBible.PopupOverlay" parent="ThemeOverlay.Material3.Dark" />
+</resources>

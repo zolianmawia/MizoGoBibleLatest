@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_home"
+            android:icon="@drawable/home"
+            android:title="@string/menu_home" />
+        <item
+            android:id="@+id/nav_quiz"
+            android:icon="@drawable/quiz"
+            android:title="Bible Quiz" />
+    </group>
+
+    <item android:title="Bookmarks &amp; Pin">
+        <menu>
+            <group android:checkableBehavior="none">
+                <item
+                    android:id="@+id/split"
+                    android:icon="@drawable/parrallel"
+                    android:title="Parallel"
+                    app:actionViewClass="com.google.android.material.materialswitch.MaterialSwitch" />
+            </group>
+            <item
+                android:id="@+id/nav_pin"
+                android:icon="@drawable/ic_pin_24"
+                android:title="Pin" />
+            <item
+                android:id="@+id/nav_note"
+                android:icon="@drawable/notes"
+                android:title="Note"
+                android:visible="false" />
+            <item
+                android:id="@+id/nav_bookmark"
+                android:icon="@drawable/ic_bookmark_24"
+                android:title="Bookmarks" />
+        </menu>
+    </item>
+
+    <item android:title="@string/others">
+        <menu>
+            <item
+                android:id="@+id/nav_premium"
+                android:icon="@drawable/premium"
+                android:title="Members" />
+
+            <item
+                android:id="@+id/feedback_mail"
+                android:icon="@drawable/feedback"
+                android:title="@string/feedback" />
+            <item
+                android:id="@+id/nav_settings"
+                android:icon="@drawable/ic_settings_black_24dp"
+                android:title="@string/menu_settings" />
+            <item
+                android:id="@+id/about"
+                android:icon="@drawable/info"
+                android:title="@string/about" />
+        </menu>
+    </item>
+</menu>

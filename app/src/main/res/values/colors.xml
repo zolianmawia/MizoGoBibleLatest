@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="purple_200">#FFBB86FC</color>
+    <color name="purple_500">#6200EE</color>
+    <color name="purple_700">#3700B3</color>
+    <color name="teal_200">#03DAC5</color>
+    <color name="teal_700">#018786</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="bible_blue">#1976D2</color>
+    <!-- Pin Colors -->
+    <color name="pin_red">#FF5252</color>
+    <color name="pin_blue">#448AFF</color>
+    <color name="pin_green">#4CAF50</color>
+    <color name="pin_yellow">#FFD740</color>
+    <color name="pin_orange">#c2a381</color>
+
+    <color name="mgb_version_text">@color/black</color>
+    <color name="mgb_version_background">@color/pin_orange</color>
+
+    <color name="bookmark_color">#FFC107</color>
+    <color name="pin_color">#4CAF50</color>
+
+    <!-- Backup old bottom bar color: #EBE2CF -->
+    <color name="bottom_nav_card_bg">#F5F6F8</color>
+    <color name="bottom_nav_card_stroke">#E0E4E8</color>
+</resources>

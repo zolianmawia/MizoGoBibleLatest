@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/mobile_navigation"
+    app:startDestination="@+id/nav_home">
+
+    <fragment
+        android:id="@+id/nav_home"
+        android:name="com.zoliana.khampat.mizobible.ui.transform.TransformFragment"
+        android:label="@string/menu_home"
+        tools:layout="@layout/fragment_transform">
+        <action
+            android:id="@+id/action_nav_home_to_nav_select_passage"
+            app:destination="@id/nav_select_passage" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_select_passage"
+        android:name="com.zoliana.khampat.mizobible.ui.passage.SelectPassageFragment"
+        android:label="Select Passage"
+        tools:layout="@layout/fragment_select_passage" >
+        <action
+            android:id="@+id/action_selectPassageFragment_to_chapterGridFragment"
+            app:destination="@id/chapterGridFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/chapterGridFragment"
+        android:name="com.zoliana.khampat.mizobible.ui.passage.ChapterGridFragment"
+        tools:layout="@layout/fragment_chapter_grid">
+        <argument
+            android:name="bookName"
+            app:argType="string" />
+        <action
+            android:id="@+id/action_chapterGridFragment_to_verseGridFragment"
+            app:destination="@id/verseGridFragment" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/verseGridFragment"
+        android:name="com.zoliana.khampat.mizobible.ui.passage.VerseGridFragment"
+        tools:layout="@layout/fragment_verse_grid">
+        <argument
+            android:name="bookName"
+            app:argType="string" />
+        <argument
+            android:name="chapter"
+            app:argType="integer" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_bookmark"
+        android:name="com.zoliana.khampat.mizobible.ui.slideshow.SlideshowFragment"
+        android:label="@string/menu_bookmark"
+        tools:layout="@layout/fragment_slideshow" />
+
+    <fragment
+        android:id="@+id/nav_note"
+        android:name="com.zoliana.khampat.mizobible.ui.slideshow.NoteFragment"
+        android:label="Notes"
+        tools:layout="@layout/fragment_note" />
+
+    <fragment
+        android:id="@+id/nav_pin"
+        android:name="com.zoliana.khampat.mizobible.ui.reflow.ReflowFragment"
+        android:label="@string/menu_pin"
+        tools:layout="@layout/fragment_reflow" />
+
+    <fragment
+        android:id="@+id/nav_search"
+        android:name="com.zoliana.khampat.mizobible.ui.search.SearchFragment"
+        android:label="@string/menu_search"
+        tools:layout="@layout/fragment_search">
+        <action
+            android:id="@+id/action_nav_search_to_nav_home"
+            app:destination="@id/nav_home" />
+    </fragment>
+
+    <fragment
+        android:id="@+id/nav_you"
+        android:name="com.zoliana.khampat.mizobible.ui.settings.ProfileFragment"
+        android:label="@string/menu_you"
+        tools:layout="@layout/fragment_profile" />
+
+    <fragment
+        android:id="@+id/nav_settings"
+        android:name="com.zoliana.khampat.mizobible.ui.settings.SettingsFragment"
+        android:label="@string/menu_settings"
+        tools:layout="@layout/fragment_settings" />
+
+    <dialog
+        android:id="@+id/nav_quiz"
+        android:name="com.zoliana.khampat.mizobible.ui.quiz.QuizFragment"
+        android:label="Bible Quiz"
+        tools:layout="@layout/fragment_quiz" />
+</navigation>

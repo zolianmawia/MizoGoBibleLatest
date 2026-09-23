@@ -1,0 +1,63 @@
+{
+  "project_info": {
+    "project_number": "1043806493962",
+    "project_id": "mizogobible-2c7f1",
+    "storage_bucket": "mizogobible-2c7f1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1043806493962:android:f06367bef40e5747fceef3",
+        "android_client_info": {
+          "package_name": "com.zoliana.khampat.mizobible"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1043806493962-9qif3i5tdsek58volp4bf0ou1iv6sata.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zoliana.khampat.mizobible",
+            "certificate_hash": "9b18b86485aac809234db16d47da0e95e2e7e498"
+          }
+        },
+        {
+          "client_id": "1043806493962-itledsbjq1ldqkgtd7a9c3ma7r747e8g.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zoliana.khampat.mizobible",
+            "certificate_hash": "a850ae883228cb2e716f44b4c03666fd04c43fb9"
+          }
+        },
+        {
+          "client_id": "1043806493962-l74k6lh6c6t6g0g98vr76mg0u79mgfmi.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.zoliana.khampat.mizobible",
+            "certificate_hash": "69424183d16909a1fb5d35d90791d22977432cec"
+          }
+        },
+        {
+          "client_id": "1043806493962-8e2rorfq0ma27vpokahrca6el80fqe01.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDDaBnUGZqPI7yWOhAgsHvWD8gihOTnWCE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1043806493962-8e2rorfq0ma27vpokahrca6el80fqe01.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

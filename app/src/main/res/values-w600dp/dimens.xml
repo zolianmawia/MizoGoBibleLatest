@@ -1,0 +1,69 @@
+<resources>
+    <!-- Profile Padding -->
+    <dimen name="profile_padding_start">24dp</dimen>
+    <dimen name="profile_padding_top">24dp</dimen>
+    <dimen name="profile_padding_end">24dp</dimen>
+    <dimen name="profile_padding_bottom">24dp</dimen>
+
+    <!-- Not Logged In View -->
+    <dimen name="not_logged_in_margin_top">60dp</dimen>
+    <dimen name="profile_icon_size">100dp</dimen>
+    <dimen name="login_sync_margin_top">16dp</dimen>
+    <dimen name="login_sync_text_size">18sp</dimen>
+    <dimen name="login_trigger_margin_top">24dp</dimen>
+
+    <!-- Logged In Profile View -->
+    <dimen name="profile_image_size">100dp</dimen>
+    <dimen name="profile_image_margin_top">24dp</dimen>
+    <dimen name="profile_initial_text_size">36sp</dimen>
+    <dimen name="user_name_margin_top">20dp</dimen>
+    <dimen name="user_name_text_size">22sp</dimen>
+    <dimen name="membership_status_margin_top">6dp</dimen>
+    <dimen name="membership_status_text_size">16sp</dimen>
+    <dimen name="user_id_margin_top">6dp</dimen>
+    <dimen name="user_id_text_size">14sp</dimen>
+
+    <!-- Stats Card -->
+    <dimen name="stats_card_margin_top">28dp</dimen>
+    <dimen name="stats_card_corner_radius">20dp</dimen>
+    <dimen name="stats_card_padding_vertical">20dp</dimen>
+    <dimen name="stats_divider_height">28dp</dimen>
+    <dimen name="pin_count_text_size">20sp</dimen>
+    <dimen name="pins_text_size">12sp</dimen>
+    <dimen name="bookmark_count_text_size">20sp</dimen>
+    <dimen name="bookmarks_text_size">12sp</dimen>
+
+    <!-- Membership Options -->
+    <dimen name="membership_options_margin_top">28dp</dimen>
+    <dimen name="buy_live_margin_top">10dp</dimen>
+
+    <!-- Members List -->
+    <dimen name="members_list_margin_top">36dp</dimen>
+    <dimen name="members_list_text_size">14sp</dimen>
+    <dimen name="members_list_card_margin_top">14dp</dimen>
+    <dimen name="members_list_card_corner_radius">20dp</dimen>
+    <dimen name="members_list_card_padding">10dp</dimen>
+    <dimen name="header_padding">14dp</dimen>
+    <dimen name="expand_icon_size">28dp</dimen>
+    <dimen name="recycler_view_min_height">120dp</dimen>
+    <dimen name="empty_list_padding">20dp</dimen>
+    <dimen name="empty_list_text_size">14sp</dimen>
+    <dimen name="divider_margin_horizontal">14dp</dimen>
+
+    <!-- Admin Panel -->
+    <dimen name="admin_panel_margin_top">28dp</dimen>
+    <dimen name="admin_panel_corner_radius">24dp</dimen>
+    <dimen name="admin_header_padding">14dp</dimen>
+    <dimen name="admin_expand_icon_size">28dp</dimen>
+    <dimen name="admin_container_padding">24dp</dimen>
+    <dimen name="input_layout_margin_top">14dp</dimen>
+    <dimen name="input_layout_margin_top_small">10dp</dimen>
+    <dimen name="button_container_margin_top">14dp</dimen>
+    <dimen name="button_container_padding_vertical">10dp</dimen>
+    <dimen name="button_margin_end">6dp</dimen>
+    <dimen name="button_margin_start">6dp</dimen>
+    <dimen name="deactivate_button_margin_top">10dp</dimen>
+
+    <!-- Logout Button -->
+    <dimen name="logout_button_margin_top">45dp</dimen>
+</resources>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="mgb_version_text">@color/white</color>
+    <color name="mgb_version_background">@color/black</color>
+
+    <!-- Backup old bottom bar color: #EBE2CF -->
+    <color name="bottom_nav_card_bg">#25282B</color>
+    <color name="bottom_nav_card_stroke">#3A3E42</color>
+</resources>

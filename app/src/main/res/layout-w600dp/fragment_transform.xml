@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    tools:context=".ui.transform.TransformFragment">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:backgroundTint="?attr/colorSurface"
+        app:elevation="0dp"
+        app:liftOnScroll="false">
+
+        <com.google.android.material.appbar.CollapsingToolbarLayout
+            android:id="@+id/collapsing_toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            app:backgroundTint="?attr/colorSurface"
+            app:contentScrim="?attr/colorSurface"
+            app:layout_scrollFlags="scroll|exitUntilCollapsed"
+            app:titleEnabled="false">
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="60dp"
+                android:background="?attr/colorSurface"
+                app:layout_collapseMode="pin" />
+
+        </com.google.android.material.appbar.CollapsingToolbarLayout>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <LinearLayout
+            android:id="@+id/layout_bible_container"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:baselineAligned="false"
+            android:clipChildren="true"
+            android:clipToPadding="true"
+            android:orientation="horizontal">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerview_bible"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/colorSurface"
+                android:clipToPadding="true"
+                android:paddingHorizontal="16dp"
+                android:paddingTop="0dp"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+
+            <FrameLayout
+                android:id="@+id/split_divider_container"
+                android:layout_width="16dp"
+                android:layout_height="match_parent"
+                android:clipChildren="false"
+                android:elevation="15dp"
+                android:translationZ="15dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <View
+                    android:id="@+id/split_divider_line"
+                    android:layout_width="16dp"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="center"
+                    android:background="?attr/colorSecondaryContainer" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/split_handle"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:layout_gravity="center"
+                    app:cardBackgroundColor="?attr/colorPrimary"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="6dp"
+                    app:strokeWidth="0dp">
+
+                    <ImageView
+                        android:id="@+id/text_handle_icon"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:padding="2dp"
+                        android:src="@drawable/split"
+                        app:tint="?attr/colorOnPrimary" />
+
+                </com.google.android.material.card.MaterialCardView>
+            </FrameLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recyclerview_bible_split"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="?attr/colorSurface"
+                android:clipToPadding="true"
+                android:paddingHorizontal="16dp"
+                android:visibility="gone"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager" />
+        </LinearLayout>
+
+        <!-- Eye Protection Overlay -->
+        <View
+            android:id="@+id/eye_protection_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#33FF9800"
+            android:clickable="false"
+            android:focusable="false"
+            android:visibility="gone" />
+
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/text_chapter_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center_horizontal"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="4dp"
+        android:elevation="10dp"
+        android:fontFamily="serif"
+        android:textColor="#61512b"
+        android:textSize="36sp"
+        android:textStyle="bold"
+        tools:text="1" />
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

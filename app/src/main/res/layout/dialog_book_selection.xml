@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_dialog_rounded"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Choose book"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="16dp"
+        android:textColor="?attr/colorOnSurface"/>
+
+    <GridView
+        android:id="@+id/grid_books"
+        android:layout_width="match_parent"
+        android:layout_height="440dp"
+        android:numColumns="3"
+        android:verticalSpacing="12dp"
+        android:horizontalSpacing="12dp"
+        android:scrollbarStyle="outsideOverlay"
+        android:clipToPadding="false"
+        android:paddingTop="4dp"
+        android:stretchMode="columnWidth" />
+
+</LinearLayout>

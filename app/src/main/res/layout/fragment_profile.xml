@@ -1,0 +1,558 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    android:fillViewport="true"
+    android:isScrollContainer="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:orientation="vertical"
+        android:paddingStart="@dimen/profile_padding_start"
+        android:paddingTop="@dimen/profile_padding_top"
+        android:paddingEnd="@dimen/profile_padding_end"
+        android:paddingBottom="@dimen/profile_padding_bottom">
+
+        <!-- Not Logged In View -->
+        <LinearLayout
+            android:id="@+id/layout_not_logged_in"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/not_logged_in_margin_top"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="@dimen/profile_icon_size"
+                android:layout_height="@dimen/profile_icon_size"
+                android:alpha="0.2"
+                android:contentDescription="Profile Icon"
+                android:src="@drawable/ic_person_24" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/login_sync_margin_top"
+                android:text="Login to Sync Data"
+                android:textSize="@dimen/login_sync_text_size"
+                android:textStyle="bold" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_login_trigger"
+                style="@style/Widget.Material3.Button.TonalButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/login_trigger_margin_top"
+                android:text="Login with Google" />
+        </LinearLayout>
+
+        <!-- Logged In Profile View -->
+        <LinearLayout
+            android:id="@+id/layout_profile"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_horizontal"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/profile_image_margin_top">
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/img_profile"
+                    android:layout_width="@dimen/profile_image_size"
+                    android:layout_height="@dimen/profile_image_size"
+                    android:scaleType="centerCrop"
+                    app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+                    app:strokeColor="?attr/colorOutline"
+                    app:strokeWidth="2dp" />
+
+                <View
+                    android:id="@+id/view_profile_placeholder"
+                    android:layout_width="@dimen/profile_image_size"
+                    android:layout_height="@dimen/profile_image_size"
+                    android:background="@drawable/bg_circle_gradient" />
+
+                <TextView
+                    android:id="@+id/text_profile_initial"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="U"
+                    android:textColor="@color/white"
+                    android:textSize="@dimen/profile_initial_text_size"
+                    android:textStyle="bold" />
+
+                <ImageView
+                    android:id="@+id/img_gold_badge"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_gravity="bottom|end"
+                    android:src="@drawable/gold"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+                <ImageView
+                    android:id="@+id/img_silver_badge"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_gravity="bottom|end"
+                    android:src="@drawable/silver"
+                    android:visibility="gone"
+                    tools:visibility="gone" />
+
+            </FrameLayout>
+
+            <TextView
+                android:id="@+id/text_user_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/user_name_margin_top"
+                android:text="User Name"
+                android:textSize="@dimen/user_name_text_size"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/text_membership_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/membership_status_margin_top"
+                android:text="Free Member"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="@dimen/membership_status_text_size"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/text_user_id"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/user_id_margin_top"
+                android:alpha="0.6"
+                android:text="user@email.com"
+                android:textSize="@dimen/user_id_text_size" />
+
+            <!-- Stats Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/stats_card_margin_top"
+                app:cardCornerRadius="@dimen/stats_card_corner_radius"
+                app:cardElevation="4dp"
+                app:strokeWidth="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingVertical="@dimen/stats_card_padding_vertical">
+
+                    <LinearLayout
+                        android:id="@+id/layout_pins_stats"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="?attr/selectableItemBackground"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/text_pin_count"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textSize="@dimen/pin_count_text_size"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:alpha="0.6"
+                            android:text="Pins"
+                            android:textSize="@dimen/pins_text_size" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="@dimen/stats_divider_height"
+                        android:background="#1A000000" />
+
+                    <LinearLayout
+                        android:id="@+id/layout_bookmarks_stats"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="?attr/selectableItemBackground"
+                        android:gravity="center"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/text_bookmark_count"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="0"
+                            android:textSize="@dimen/bookmark_count_text_size"
+                            android:textStyle="bold" />
+
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:alpha="0.6"
+                            android:text="Bookmarks"
+                            android:textSize="@dimen/bookmarks_text_size" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Membership Options -->
+            <LinearLayout
+                android:id="@+id/layout_membership_options"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/membership_options_margin_top"
+                android:orientation="vertical">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_buy_patron"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Silver Member (Rs. 200/Year)"
+                    app:icon="@drawable/premium" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_buy_live"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/buy_live_margin_top"
+                    android:text="Gold Member (Rs. 1999/Lifetime)"
+                    app:icon="@drawable/premium" />
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/members_list_margin_top"
+                android:alpha="0.5"
+                android:text="MGB MEMBERS LIST"
+                android:textSize="@dimen/members_list_text_size"
+                android:textStyle="bold" />
+
+            <!-- Members List Card -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/members_list_card_margin_top"
+                app:cardCornerRadius="@dimen/members_list_card_corner_radius"
+                app:cardElevation="4dp"
+                app:strokeWidth="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="@dimen/members_list_card_padding">
+
+                    <!-- Live Header -->
+                    <LinearLayout
+                        android:id="@+id/header_live_members"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="?attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="@dimen/header_padding">
+
+                        <TextView
+                            android:id="@+id/text_live_members_title"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Gold Members 💎"
+                            android:textColor="?attr/colorPrimary"
+                            android:textStyle="bold" />
+
+                        <ImageView
+                            android:id="@+id/icon_expand_live"
+                            android:layout_width="@dimen/expand_icon_size"
+                            android:layout_height="@dimen/expand_icon_size"
+                            android:src="@drawable/ic_arrow_drop_down_24"
+                            app:tint="?attr/colorPrimary" />
+                    </LinearLayout>
+
+                    <!-- Live Container -->
+                    <LinearLayout
+                        android:id="@+id/container_live_members"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/rv_live_members"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="@dimen/recycler_view_min_height"
+                            android:nestedScrollingEnabled="false"
+                            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                            tools:listitem="@layout/item_member" />
+
+                        <TextView
+                            android:id="@+id/text_empty_live"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:alpha="0.5"
+                            android:gravity="center"
+                            android:padding="@dimen/empty_list_padding"
+                            android:text="Gold member an la awm lo."
+                            android:textSize="@dimen/empty_list_text_size"
+                            android:visibility="gone" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginHorizontal="@dimen/divider_margin_horizontal"
+                        android:background="#1A000000" />
+
+                    <!-- Patron Header -->
+                    <LinearLayout
+                        android:id="@+id/header_patron_members"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="?attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="@dimen/header_padding">
+
+                        <TextView
+                            android:id="@+id/text_patron_members_title"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="Silver Members ✨"
+                            android:textStyle="bold" />
+
+                        <ImageView
+                            android:id="@+id/icon_expand_patron"
+                            android:layout_width="@dimen/expand_icon_size"
+                            android:layout_height="@dimen/expand_icon_size"
+                            android:src="@drawable/ic_arrow_drop_down_24" />
+                    </LinearLayout>
+
+                    <!-- Patron Container -->
+                    <LinearLayout
+                        android:id="@+id/container_patron_members"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:visibility="gone">
+
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:id="@+id/rv_patron_members"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:minHeight="@dimen/recycler_view_min_height"
+                            android:nestedScrollingEnabled="false"
+                            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                            tools:listitem="@layout/item_member" />
+
+                        <TextView
+                            android:id="@+id/text_empty_patron"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:alpha="0.5"
+                            android:gravity="center"
+                            android:padding="@dimen/empty_list_padding"
+                            android:text="Silver member an la awm lo."
+                            android:textSize="@dimen/empty_list_text_size"
+                            android:visibility="gone" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Admin Panel -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/admin_panel_card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/admin_panel_margin_top"
+                android:visibility="gone"
+                app:cardBackgroundColor="?attr/colorSurfaceVariant"
+                app:cardCornerRadius="@dimen/admin_panel_corner_radius"
+                app:strokeWidth="0dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <!-- Admin Header -->
+                    <LinearLayout
+                        android:id="@+id/header_admin_panel"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="?attr/selectableItemBackground"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="@dimen/admin_header_padding">
+
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:text="ADMIN DASHBOARD 👑"
+                            android:textColor="?attr/colorPrimary"
+                            android:textStyle="bold" />
+
+                        <ImageView
+                            android:id="@+id/icon_expand_admin"
+                            android:layout_width="@dimen/admin_expand_icon_size"
+                            android:layout_height="@dimen/admin_expand_icon_size"
+                            android:src="@drawable/ic_arrow_drop_down_24"
+                            app:tint="?attr/colorPrimary" />
+                    </LinearLayout>
+
+                    <!-- Admin Container -->
+                    <LinearLayout
+                        android:id="@+id/container_admin_panel"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="@dimen/admin_container_padding"
+                        android:visibility="gone">
+
+                        <ScrollView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical">
+
+                                <com.google.android.material.textfield.TextInputLayout
+                                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/input_layout_margin_top"
+                                    android:hint="User Account Gmail">
+
+                                    <com.google.android.material.textfield.TextInputEditText
+                                        android:id="@+id/admin_user_email"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="textEmailAddress" />
+                                </com.google.android.material.textfield.TextInputLayout>
+
+                                <com.google.android.material.textfield.TextInputLayout
+                                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/input_layout_margin_top_small"
+                                    android:hint="Hming (Display Name)">
+
+                                    <com.google.android.material.textfield.TextInputEditText
+                                        android:id="@+id/admin_user_name"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="textPersonName" />
+                                </com.google.android.material.textfield.TextInputLayout>
+
+                                <com.google.android.material.textfield.TextInputLayout
+                                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/input_layout_margin_top_small"
+                                    android:hint="Veng/Khua (Address)">
+
+                                    <com.google.android.material.textfield.TextInputEditText
+                                        android:id="@+id/admin_user_address"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="textPostalAddress" />
+                                </com.google.android.material.textfield.TextInputLayout>
+
+                                <com.google.android.material.textfield.TextInputLayout
+                                    style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="@dimen/input_layout_margin_top_small"
+                                    android:hint="Phone (Contact)">
+
+                                    <com.google.android.material.textfield.TextInputEditText
+                                        android:id="@+id/admin_user_phone"
+                                        android:layout_width="match_parent"
+                                        android:layout_height="wrap_content"
+                                        android:inputType="phone" />
+                                </com.google.android.material.textfield.TextInputLayout>
+
+                            </LinearLayout>
+                        </ScrollView>
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/button_container_margin_top"
+                            android:orientation="horizontal"
+                            android:paddingVertical="@dimen/button_container_padding_vertical">
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_admin_activate_patron"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginEnd="@dimen/button_margin_end"
+                                android:layout_weight="1"
+                                android:text="Silver"
+                                app:elevation="4dp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btn_admin_activate_live"
+                                style="@style/Widget.Material3.Button"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="@dimen/button_margin_start"
+                                android:layout_weight="1"
+                                android:text="Gold"
+                                app:elevation="4dp" />
+                        </LinearLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btn_admin_deactivate"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="@dimen/deactivate_button_margin_top"
+                            android:text="User Deactivate-na"
+                            android:textColor="?attr/colorError" />
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_logout"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/logout_button_margin_top"
+                android:text="Logout"
+                android:textColor="?attr/colorError"
+                app:icon="@drawable/ic_logout"
+                app:iconTint="?attr/colorError" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

@@ -1,0 +1,5 @@
+<!-- app/src/main/res/drawable/bg_color_selected.xml -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="#448AFF" /> <!-- A chhung pawl --><corners android:radius="16dp" />
+    <padding android:bottom="2dp" android:left="2dp" android:right="2dp" android:top="2dp" />
+</shape>

@@ -1,0 +1,423 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar_layout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorSurface"
+        android:fitsSystemWindows="false"
+        app:elevation="0dp">
+
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            app:popupTheme="@style/Theme.MizoGoBible.PopupOverlay"
+            app:titleTextColor="?attr/colorOnSurface">
+
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <LinearLayout
+                    android:id="@+id/toolbar_chapter_selector"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:visibility="visible">
+
+                    <ImageView
+                        android:id="@+id/btn_prev_toolbar"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Prev"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_chevron_left_24"
+                        app:tint="?attr/colorOnSurface" />
+
+                    <TextView
+                        android:id="@+id/text_selection_toolbar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="?attr/selectableItemBackground"
+                        android:paddingHorizontal="4dp"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="14sp"
+                        android:textStyle="bold"
+                        tools:text="Genesis 1" />
+
+                    <ImageView
+                        android:id="@+id/btn_next_toolbar"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Next"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_chevron_right_24"
+                        app:tint="?attr/colorOnSurface" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/layout_titles_container"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="16dp"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toStartOf="@+id/layout_toolbar_buttons"
+                    app:layout_constraintStart_toEndOf="@+id/toolbar_chapter_selector"
+                    app:layout_constraintTop_toTopOf="parent">
+
+                    <TextView
+                        android:id="@+id/text_toolbar_bible_ref"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-condensed"
+                        android:maxLines="1"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="19sp"
+                        android:textStyle="bold"
+                        tools:text="Genesis 1" />
+
+                    <TextView
+                        android:id="@+id/text_toolbar_fragment_title"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:maxLines="1"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="18sp"
+                        android:textStyle="bold"
+                        android:visibility="gone"
+                        tools:text="Bookmarks"
+                        tools:visibility="visible" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/layout_toolbar_buttons"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent">
+
+                    <FrameLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginEnd="8dp">
+
+                        <TextView
+                            android:id="@+id/text_version_selector"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="?attr/selectableItemBackground"
+                            android:drawablePadding="0dp"
+                            android:gravity="center_vertical"
+                            android:paddingHorizontal="4dp"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="14sp"
+                            android:textStyle="bold"
+                            app:drawableEndCompat="@drawable/ic_arrow_drop_down_24"
+                            app:drawableTint="?attr/colorOnSurface"
+                            tools:text="MzOV" />
+
+                        <View
+                            android:id="@+id/view_update_badge"
+                            android:layout_width="9dp"
+                            android:layout_height="9dp"
+                            android:layout_gravity="top|end"
+                            android:layout_marginTop="-0dp"
+                            android:layout_marginEnd="-0dp"
+                            android:background="@drawable/bg_notification_badge"
+                            android:visibility="gone"
+                            tools:visibility="visible" />
+                    </FrameLayout>
+
+                    <ImageView
+                        android:id="@+id/btn_toolbar_font"
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Font"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_text_fields_24"
+                        app:tint="?attr/colorOnSurface" />
+
+                    <ImageView
+                        android:id="@+id/btn_toolbar_search"
+                        android:layout_width="42dp"
+                        android:layout_height="42dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Search"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_search_24"
+                        app:tint="?attr/colorOnSurface" />
+
+                    <ImageView
+                        android:id="@+id/free"
+                        android:layout_width="10dp"
+                        android:layout_height="42dp"
+                        android:contentDescription="Spacer"
+                        android:padding="8dp"
+                        app:tint="?attr/colorOnSurface" />
+
+                </LinearLayout>
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+        </androidx.appcompat.widget.Toolbar>
+
+        <LinearLayout
+            android:id="@+id/layout_split_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone"
+            tools:visibility="visible">
+
+            <TextView
+                android:id="@+id/text_split_version_label"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:alpha="0.6"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:drawablePadding="4dp"
+                android:focusable="true"
+                android:fontFamily="sans-serif-condensed"
+                android:gravity="end|center_vertical"
+                android:paddingStart="16dp"
+                android:paddingEnd="8dp"
+                android:textColor="?attr/colorOnSurface"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                app:drawableEndCompat="@drawable/ic_arrow_drop_down_24"
+                tools:text="Parallel: KJV" />
+
+            <ImageView
+                android:id="@+id/btn_close_parallel"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="8dp"
+                android:alpha="0.6"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Close"
+                android:padding="6dp"
+                android:src="@drawable/ic_close_24"
+                app:tint="?attr/colorOnSurface" />
+        </LinearLayout>
+
+        <ProgressBar
+            android:id="@+id/progress_download_minimized"
+            style="@android:style/Widget.ProgressBar.Horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:max="100"
+            android:progress="0"
+            android:progressDrawable="@drawable/bg_progress_download"
+            android:visibility="gone" />
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <include
+        android:id="@+id/content_main"
+        layout="@layout/content_main"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior" />
+
+    <!-- Floating Bottom Navigation Container -->
+    <LinearLayout
+        android:id="@+id/bottom_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:background="@android:color/transparent"
+        android:orientation="vertical">
+
+        <!-- History Back / Forward Floating Container -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/nav_history_container"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="4dp"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/bottom_nav_card_bg"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="4dp"
+            app:strokeColor="@color/bottom_nav_card_stroke"
+            app:strokeWidth="1dp"
+            tools:visibility="visible">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="32dp"
+                android:orientation="horizontal">
+
+                <ImageButton
+                    android:id="@+id/btn_nav_back"
+                    android:layout_width="42dp"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="9dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_menu_left"
+                    app:tint="?attr/colorOnSurface" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginTop="6dp"
+                    android:layout_marginBottom="6dp"
+                    android:alpha="0.1"
+                    android:background="?attr/colorOnSurface" />
+
+                <ImageButton
+                    android:id="@+id/btn_nav_forward"
+                    android:layout_width="42dp"
+                    android:layout_height="match_parent"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="9dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_menu_right"
+                    app:tint="?attr/colorOnSurface" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Unified Bottom Selector Bar -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/layout_selector"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginTop="0dp"
+            android:layout_marginBottom="12dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/bottom_nav_card_bg"
+            app:cardCornerRadius="14dp"
+            app:cardElevation="4dp"
+            app:strokeColor="@color/bottom_nav_card_stroke"
+            app:strokeWidth="1dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="54dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="6dp">
+
+                <!-- Drawer Button -->
+                <ImageButton
+                    android:id="@+id/btn_bottom_drawer"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Open Drawer"
+                    android:padding="12dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/menu"
+                    app:tint="?attr/colorOnSurface" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="24dp"
+                    android:layout_marginEnd="4dp"
+                    android:alpha="0.15"
+                    android:background="?attr/colorOnSurface" />
+
+                <!-- Prev Chapter -->
+                <ImageView
+                    android:id="@+id/btn_prev_chapter"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Prev"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_chevron_left_24"
+                    app:tint="?attr/colorOnSurface" />
+
+                <!-- Current Chapter Selection -->
+                <TextView
+                    android:id="@+id/text_current_selection"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="?attr/selectableItemBackground"
+                    android:fontFamily="sans-serif-condensed"
+                    android:gravity="center"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textSize="17sp"
+                    android:textStyle="bold"
+                    tools:text="Genesis 1" />
+
+                <!-- Next Chapter -->
+                <ImageView
+                    android:id="@+id/btn_next_chapter"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Next"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_chevron_right_24"
+                    app:tint="?attr/colorOnSurface" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="24dp"
+                    android:layout_marginStart="2dp"
+                    android:alpha="0.15"
+                    android:background="?attr/colorOnSurface" />
+
+                <!-- Pin Palette Button -->
+                <ImageButton
+                    android:id="@+id/btn_bottom_pin"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Pin Palette"
+                    android:padding="10dp"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_pin_24"
+                    app:tint="?attr/colorOnSurface" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottom_nav_view"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            app:backgroundTint="?attr/colorSurface"
+            app:itemActiveIndicatorStyle="@style/Widget.Material3.BottomNavigationView.ActiveIndicator"
+            app:itemIconTint="?attr/colorOnSurfaceVariant"
+            app:itemTextColor="?attr/colorOnSurfaceVariant"
+            app:labelVisibilityMode="labeled"
+            app:menu="@menu/bottom_navigation"
+            app:paddingBottomSystemWindowInsets="false" />
+
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

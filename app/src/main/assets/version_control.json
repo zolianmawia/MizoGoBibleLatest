@@ -1,0 +1,32 @@
+{
+  "MGB": {
+    "version": 15,
+    "url": "https://drive.google.com/uc?export=download&id=1RTsiPZXoxi5MH1ia0JuB16rmb8Tb3grv",
+    "message": "Mizo Go Bible database Genesis atang a tawp Thupuan thleng ennawn chhuah vek a ni e."
+  },
+  "KJV": {
+    "version": 7,
+    "url": "https://drive.google.com/uc?export=download&id=10gkTPc6QlgNjlyMRs4J0m-c8f88guXje",
+    "message": "King James Version database update thar a awm e..."
+      },
+  "GREEK": {
+    "version": 2,
+    "url": "https://drive.google.com/uc?export=download&id=1YkpFxCXi9gTP7cqatl-5nYHRyyNpGKNw",
+    "message": "Greek Bible update thar a awm e."
+  },
+  "HINDI": {
+    "version": 3,
+    "url": "https://drive.google.com/uc?export=download&id=1dxI6JaP5WT6jcm_TbHJHzJYi42VwrER4",
+    "message": "Hindi Bible update thar a awm e."
+  },
+  "NIV": {
+    "version": 6,
+    "url": "https://drive.google.com/uc?export=download&id=1eDOhmWVYeNi6eBKMba07qj6Xh8Glx6WP",
+    "message": "New International Version (NIV) Bible update thar a awm e. "
+  },
+  "BURMESE": {
+    "version": 6,
+    "url": "https://drive.google.com/uc?export=download&id=12PnR7pF3DdVKXc2le5lVWfCcKyE0OP6p",
+    "message": "Burmese Bible update thar a awm e."
+  }
+}

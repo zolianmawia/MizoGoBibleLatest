@@ -1,0 +1,31 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="32dp"
+    android:height="100dp"
+    android:viewportWidth="32"
+    android:viewportHeight="100">
+    
+    <!-- Up Arrow -->
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M16,2l8,10h-16z" />
+        
+    <!-- Down Arrow -->
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M16,98l8,-10h-16z" />
+        
+    <!-- Main Handle Pill -->
+    <path
+        android:fillColor="#1976D2"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:pathData="M16,15c-6,0 -11,4 -11,10l0,50c0,6 5,10 11,10s11,-4 11,-10l0,-50c0,-6 -5,-10 -11,-10z" />
+        
+    <!-- Ribs (Horizontal Lines inside) -->
+    <path
+        android:strokeColor="#80FFFFFF"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M11,35h10M11,42h10M11,47h10M11,54h10M11,61h10M11,68h10" />
+        
+</vector>
