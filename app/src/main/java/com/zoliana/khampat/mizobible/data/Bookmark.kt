@@ -10,7 +10,8 @@ data class Bookmark(
     val verse: String = "",
     val text: String = "",
     val version: String = "MzOV",
+    val title: String = "",
     val note: String = "",
-    val color: String = "#FFD740", // Default gold/yellow
+    val color: String = "#FFF59D", // Default soft pastel yellow (dal deuh)
     val timestamp: Long = System.currentTimeMillis()
 )

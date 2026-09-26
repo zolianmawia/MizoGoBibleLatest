@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/text_empty_notice"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="36dp"
+    android:layout_marginEnd="16dp"
+    android:layout_marginTop="4dp"
+    android:layout_marginBottom="8dp"
+    android:padding="8dp"
+    android:textSize="13sp"
+    android:textStyle="italic"
+    android:textColor="?attr/colorOnSurfaceVariant"
+    android:text="Vawiin atan bookmark a la awm rih lo" />

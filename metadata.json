@@ -1,0 +1,8 @@
+{
+  "name": "Mizo Go Bible",
+  "description": "Mizo Bible application with multiple translations, pins, bookmarks, and customizable reading themes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

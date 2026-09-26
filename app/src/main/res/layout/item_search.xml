@@ -21,7 +21,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="2dp"
-        android:textColor="?attr/colorOnSurface"
+        android:textColor="@color/bible_verse_text"
         android:textSize="16sp"
         android:text="Atir hmain Pathianin van leh lei a siam a." />
 

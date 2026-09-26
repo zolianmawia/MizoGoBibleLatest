@@ -1,6 +1,7 @@
 package com.zoliana.khampat.mizobible.ui.transform
 
 import android.app.Dialog
+import android.graphics.Color
 import android.graphics.Typeface
 import android.os.Bundle
 import android.util.TypedValue
@@ -9,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -16,11 +18,15 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.slider.Slider
+import com.zoliana.khampat.mizobible.MainActivity
 import com.zoliana.khampat.mizobible.R
 import com.zoliana.khampat.mizobible.data.BibleDatabase
 import com.zoliana.khampat.mizobible.data.BibleRepository
 import com.zoliana.khampat.mizobible.data.UserDatabase
 import com.zoliana.khampat.mizobible.databinding.DialogFontSettingsBinding
+import com.zoliana.khampat.mizobible.ui.settings.ColorPickerDialog
+import com.zoliana.khampat.mizobible.ui.settings.ColorSwatchAdapter
+import com.zoliana.khampat.mizobible.utils.ThemeHelper
 import kotlin.math.roundToInt
 
 class FontSettingsDialog : BottomSheetDialogFragment() {
@@ -72,6 +78,7 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
 
         val currentSettings = viewModel.fontSettings.value
         setupFontList(currentSettings.fontFamily)
+        setupFontColorList(currentSettings.fontColor)
 
         // Crash prevention: Slider value hi a step nena inmil turin snapToStep kan hmang vek ang
         binding.sliderFontSize.value = snapToStep(currentSettings.fontSize, binding.sliderFontSize)
@@ -112,6 +119,22 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
 
         binding.btnBold.setOnClickListener { updateSettings { it.copy(isBold = !it.isBold) } }
         binding.btnItalic.setOnClickListener { updateSettings { it.copy(isItalic = !it.isItalic) } }
+
+        binding.btnFontColorPicker?.setOnClickListener {
+            val currentHex = if (viewModel.fontSettings.value.fontColor.startsWith("#")) {
+                viewModel.fontSettings.value.fontColor
+            } else "#000000"
+
+            ColorPickerDialog(
+                context = requireContext(),
+                initialColorHex = currentHex,
+                title = "Font Color Picker"
+            ) { hex ->
+                updateSettings { it.copy(fontColor = hex) }
+                setupFontColorList(hex)
+            }.show()
+        }
+
         binding.btnDone.setOnClickListener { dismiss() }
     }
 
@@ -150,9 +173,30 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
         if (index != -1) binding.recyclerFonts.scrollToPosition(index)
     }
 
+    private fun setupFontColorList(currentColor: String) {
+        val swatchItems = ThemeHelper.FONT_COLORS.map { option ->
+            ColorSwatchAdapter.SwatchItem(
+                id = option.hex,
+                name = option.name,
+                colorInt = option.displayColor,
+                hexValue = option.hex
+            )
+        }
+
+        val adapter = ColorSwatchAdapter(swatchItems, currentColor) { item ->
+            updateSettings { it.copy(fontColor = item.hexValue) }
+        }
+        binding.recyclerFontColors?.layoutManager =
+            LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
+        binding.recyclerFontColors?.adapter = adapter
+    }
+
     private fun updateSettings(update: (FontSettings) -> FontSettings) {
         val newSettings = update(viewModel.fontSettings.value)
         viewModel.updateFontSettings(newSettings)
+        ThemeHelper.setFontColor(requireContext(), newSettings.fontColor)
+        ThemeHelper.setCustomIconColor(requireContext(), newSettings.fontColor)
+        (activity as? MainActivity)?.applyThemeColors()
         updatePreview(newSettings)
         updateValueTexts(newSettings, viewModel.sidePadding.value)
     }
@@ -183,7 +227,19 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
     private fun updatePreview(settings: FontSettings) {
         binding.textPreview.setTextSize(TypedValue.COMPLEX_UNIT_SP, settings.fontSize)
         binding.textPreview.letterSpacing = settings.letterSpacing
-        binding.textPreview.setLineSpacing(0f, settings.lineHeight)
+        val density = resources.displayMetrics.density
+        val mult = if (settings.lineHeight <= 1.05f) 1.28f else settings.lineHeight
+        binding.textPreview.setLineSpacing((2 * density), mult)
+
+        val customColor = try {
+            if (settings.fontColor.isNotBlank() && settings.fontColor != "default") {
+                Color.parseColor(settings.fontColor)
+            } else null
+        } catch (_: Exception) { null }
+
+        val effectiveVerseBg = ThemeHelper.getEffectiveToolbarColor(requireContext())
+        val finalTextColor = ThemeHelper.getContrastingTextColor(effectiveVerseBg, customColor)
+        binding.textPreview.setTextColor(finalTextColor)
 
         val style = when {
             settings.isBold && settings.isItalic -> Typeface.BOLD_ITALIC
@@ -201,7 +257,7 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
             when (fontName) {
                 "Default" -> Typeface.create(Typeface.DEFAULT, style)
                 "Sans Serif" -> Typeface.create(Typeface.SANS_SERIF, style)
-                "Serif" -> Typeface.create(Typeface.SERIF, style)
+                "Serif", "Times New Roman" -> Typeface.create(Typeface.SERIF, style)
                 "Monospace" -> Typeface.create(Typeface.MONOSPACE, style)
                 else -> {
                     val extensions = listOf(".ttf", ".otf")

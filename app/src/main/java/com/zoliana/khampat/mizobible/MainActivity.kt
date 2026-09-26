@@ -6,23 +6,35 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import com.zoliana.khampat.mizobible.utils.NotificationHelper
 import android.content.res.Configuration
 import android.database.sqlite.SQLiteDatabase
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.LinearGradient
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Rect
+import android.graphics.Shader
+import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.provider.Settings
 import android.util.TypedValue
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
-import android.webkit.WebView
-import android.webkit.WebViewClient
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -30,13 +42,17 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
+import com.zoliana.khampat.mizobible.utils.ThemeHelper
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.FileProvider
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.core.view.updatePadding
+import androidx.core.widget.ImageViewCompat
+import androidx.core.widget.TextViewCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -102,6 +118,7 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
     private var downloadProgressBinding: DialogDownloadProgressBinding? = null
 
     private var backPressedTime: Long = 0
+    private var authStateListener: FirebaseAuth.AuthStateListener? = null
 
     val viewModel: TransformViewModel by viewModels {
         val bibleDb = BibleDatabase.getDatabase(this)
@@ -111,13 +128,14 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        ThemeHelper.applyTheme(this)
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
 
         createNotificationChannel()
-        FirebaseApp.initializeApp(this)
-
-        Checkout.preload(applicationContext)
+        if (FirebaseApp.getApps(this).isEmpty()) {
+            FirebaseApp.initializeApp(this)
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -125,31 +143,34 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
             }
         }
 
-        val prefs = getSharedPreferences("bible_prefs", MODE_PRIVATE)
-        val defaultTheme = if (prefs.contains("dark_mode") && !prefs.contains("theme_mode")) {
-            val isDark = prefs.getBoolean("dark_mode", false)
-            val mode =
-                if (isDark) AppCompatDelegate.MODE_NIGHT_YES else AppCompatDelegate.MODE_NIGHT_NO
-            prefs.edit().putInt("theme_mode", mode).apply()
-            mode
-        } else {
-            prefs.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-        }
-        AppCompatDelegate.setDefaultNightMode(defaultTheme)
-
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        applyCustomThemeBackground()
 
-        FirebaseAuth.getInstance().addAuthStateListener { auth ->
-            val user = auth.currentUser
+        val auth = FirebaseAuth.getInstance()
+        authStateListener = FirebaseAuth.AuthStateListener { firebaseAuth ->
+            val user = firebaseAuth.currentUser
             lifecycleScope.launch(Dispatchers.IO) {
-                if (user != null) {
-                    OneSignal.login(user.uid)
-                } else {
-                    OneSignal.logout()
+                try {
+                    val currentExternalId = try { OneSignal.User.externalId } catch (e: Exception) { null }
+                    if (user != null) {
+                        if (currentExternalId != user.uid) {
+                            OneSignal.login(user.uid)
+                        }
+                    } else {
+                        // Only logout if a user was previously logged into OneSignal.
+                        // Calling logout when no user is logged in resets the session and forces
+                        // new FCM token registrations, leading to TOO_MANY_REGISTRATIONS.
+                        if (!currentExternalId.isNullOrEmpty()) {
+                            OneSignal.logout()
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w("MGB_DEBUG", "OneSignal sync skipped: ${e.message}")
                 }
             }
         }
+        authStateListener?.let { auth.addAuthStateListener(it) }
 
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -250,17 +271,6 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
             binding.drawerLayout.openDrawer(GravityCompat.START)
         }
 
-        binding.appBarMain.btnBottomPin.setOnClickListener {
-            val nhf =
-                supportFragmentManager.findFragmentById(R.id.nav_host_fragment_content_main) as? NavHostFragment
-            val fragment = nhf?.childFragmentManager?.primaryNavigationFragment
-                ?: nhf?.childFragmentManager?.fragments?.firstOrNull { it is TransformFragment }
-
-            if (fragment is TransformFragment) {
-                fragment.showPinSelectionPopup(binding.appBarMain.btnBottomPin)
-            }
-        }
-
         navController.addOnDestinationChangedListener { _, destination, _ ->
             val passageSelectionScreens = listOf(
                 R.id.nav_select_passage,
@@ -306,6 +316,7 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
             refreshToolbarSelector()
             updateNavHistoryVisibility()
             applyLayoutStyle()
+            applyThemeColors()
         }
 
         applyLayoutStyle()
@@ -453,7 +464,7 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         email: String
     ) {
         val checkout = Checkout()
-        checkout.setKeyID("rzp_live_TSRn8yx3gcRlkk")
+        checkout.setKeyID(BuildConfig.RAZORPAY_KEY_ID)
 
         viewModel.pendingMembershipType = type
         viewModel.pendingName = name
@@ -552,29 +563,16 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         email: String,
         expiry: Long
     ) {
-        lifecycleScope.launch {
-            try {
-                val templateFileName =
-                    if (type == MembershipType.GOLD) "citation/gold.html" else "citation/silver.html"
-                val htmlContent =
-                    assets.open(templateFileName).bufferedReader().use { it.readText() }
-                        .replace("{{USERNAME}}", name.uppercase())
-                        .replace("{{ADDRESS}}", address)
-                        .replace("{{EMAIL}}", email)
-                        .replace(
-                            "{{VALIDITY}}",
-                            if (type == MembershipType.SILVER) SimpleDateFormat(
-                                "dd/MM/yyyy",
-                                Locale.getDefault()
-                            ).format(Date(expiry)) else "Lifetime Membership"
-                        )
-                        .replace(
-                            "{{DATE}}",
-                            SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
-                        )
+        val validityStr = if (type == MembershipType.SILVER) SimpleDateFormat(
+            "dd/MM/yyyy",
+            Locale.getDefault()
+        ).format(Date(expiry)) else "Lifetime Membership"
+        val dateStr = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date())
 
-                showCertificateAndCapture(htmlContent) { bitmap ->
-                    lifecycleScope.launch(Dispatchers.IO) {
+        lifecycleScope.launch {
+            fun saveAndSendBitmap(bitmap: Bitmap) {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
                         val imagesDir = File(cacheDir, "images").apply { mkdirs() }
                         val certificateFile = File(imagesDir, "certificate.jpg")
                         FileOutputStream(certificateFile).use { out ->
@@ -583,52 +581,230 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
                         withContext(Dispatchers.Main) {
                             sendCertificateEmail(type, email, certificateFile, "image/jpeg")
                         }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            Toast.makeText(
+                                this@MainActivity,
+                                "Certificate thawn theih loh: ${e.message}",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
                 }
+            }
+
+            try {
+                val bitmap = drawNativeCertificate(type, name, address, email, validityStr, dateStr)
+                saveAndSendBitmap(bitmap)
             } catch (e: Exception) {
                 Toast.makeText(
                     this@MainActivity,
-                    "Certificate siamnaah tihsual a awm: ${e.message}",
-                    Toast.LENGTH_LONG
+                    "Certificate siam theih loh: ${e.message}",
+                    Toast.LENGTH_SHORT
                 ).show()
             }
         }
     }
 
-    private fun showCertificateAndCapture(html: String, onCaptured: (Bitmap) -> Unit) {
-        val dialog = Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen)
-        val webView = WebView(this).apply {
-            settings.javaScriptEnabled = false
-            settings.loadWithOverviewMode = true
-            settings.useWideViewPort = true
-            setBackgroundColor(Color.TRANSPARENT)
-        }
-        dialog.setContentView(webView)
+    private fun drawNativeCertificate(
+        type: MembershipType,
+        name: String,
+        address: String,
+        email: String,
+        validity: String,
+        date: String
+    ): Bitmap {
+        val width = 1200
+        val height = 1650
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
 
-        webView.webViewClient = object : WebViewClient() {
-            override fun onPageFinished(view: WebView, url: String?) {
-                view.postDelayed({
-                    val rootView = dialog.window!!.decorView.rootView
-                    val bitmap = Bitmap.createBitmap(
-                        rootView.width,
-                        rootView.height,
-                        Bitmap.Config.ARGB_8888
-                    )
-                    val canvas = Canvas(bitmap)
-                    rootView.draw(canvas)
-                    dialog.dismiss()
-                    onCaptured(bitmap)
-                }, 300)
-            }
+        // Background
+        val bgPaint = Paint().apply {
+            color = Color.WHITE
+            style = Paint.Style.FILL
         }
-        webView.loadDataWithBaseURL(
-            "file:///android_asset/citation/",
-            html,
-            "text/html",
-            "UTF-8",
-            null
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), bgPaint)
+
+        // Outer Border
+        val borderPaint = Paint().apply {
+            color = Color.parseColor("#CCCCCC")
+            style = Paint.Style.STROKE
+            strokeWidth = 6f
+        }
+        canvas.drawRect(24f, 24f, width - 24f, height - 24f, borderPaint)
+
+        val innerBorderPaint = Paint().apply {
+            color = if (type == MembershipType.GOLD) Color.parseColor("#FFD700") else Color.parseColor("#A0A0A0")
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+        }
+        canvas.drawRect(36f, 36f, width - 36f, height - 36f, innerBorderPaint)
+
+        // Top Header Banner
+        val headerHeight = 320f
+        val headerPaint = Paint().apply {
+            shader = LinearGradient(
+                0f, 0f, 0f, headerHeight,
+                Color.parseColor("#00134D"), Color.parseColor("#000000"),
+                Shader.TileMode.CLAMP
+            )
+        }
+        val headerPath = Path().apply {
+            moveTo(0f, 0f)
+            lineTo(width.toFloat(), 0f)
+            lineTo(width.toFloat(), headerHeight * 0.75f)
+            lineTo(width / 2f, headerHeight)
+            lineTo(0f, headerHeight * 0.75f)
+            close()
+        }
+        canvas.drawPath(headerPath, headerPaint)
+
+        // Header Title
+        val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = if (type == MembershipType.GOLD) Color.parseColor("#FFD700") else Color.parseColor("#E0E0E0")
+            textSize = 52f
+            typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD)
+            textAlign = Paint.Align.CENTER
+            setShadowLayer(4f, 2f, 2f, Color.parseColor("#80000000"))
+        }
+        canvas.drawText("Certificate of Membership", width / 2f, 130f, titlePaint)
+
+        val subTitlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#00BFFF")
+            textSize = 30f
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            textAlign = Paint.Align.CENTER
+            letterSpacing = 0.1f
+        }
+        canvas.drawText(
+            if (type == MembershipType.GOLD) "MIZO GO BIBLE - GOLD MEMBER" else "MIZO GO BIBLE - SILVER MEMBER",
+            width / 2f,
+            190f,
+            subTitlePaint
         )
-        dialog.show()
+
+        // Badge Icon
+        val badgeRes = if (type == MembershipType.GOLD) R.drawable.gold else R.drawable.silver
+        try {
+            val badgeBitmap = BitmapFactory.decodeResource(resources, badgeRes)
+            if (badgeBitmap != null) {
+                val badgeSize = 140
+                val badgeRect = Rect(
+                    (width / 2) - (badgeSize / 2),
+                    (headerHeight - (badgeSize / 2)).toInt(),
+                    (width / 2) + (badgeSize / 2),
+                    (headerHeight + (badgeSize / 2)).toInt()
+                )
+                canvas.drawBitmap(badgeBitmap, null, badgeRect, null)
+            }
+        } catch (_: Exception) {}
+
+        // Content
+        var currentY = headerHeight + 160f
+
+        val certifyPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#555555")
+            textSize = 28f
+            typeface = Typeface.create(Typeface.SERIF, Typeface.ITALIC)
+            textAlign = Paint.Align.CENTER
+        }
+        canvas.drawText("This is to proudly certify that", width / 2f, currentY, certifyPaint)
+
+        currentY += 70f
+        // Member Name
+        val namePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#1A1A1A")
+            textSize = 46f
+            typeface = Typeface.create(Typeface.SERIF, Typeface.BOLD)
+            textAlign = Paint.Align.CENTER
+        }
+        canvas.drawText(name.uppercase(Locale.getDefault()), width / 2f, currentY, namePaint)
+
+        // Underline for name
+        val linePaint = Paint().apply {
+            color = Color.parseColor("#555555")
+            strokeWidth = 2.5f
+        }
+        canvas.drawLine(width * 0.2f, currentY + 16f, width * 0.8f, currentY + 16f, linePaint)
+
+        currentY += 90f
+        // Info Details Block
+        val labelPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#666666")
+            textSize = 26f
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+        }
+        val valuePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#222222")
+            textSize = 26f
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+        }
+
+        val leftMargin = width * 0.22f
+        val valueMargin = width * 0.40f
+        val lineRight = width * 0.78f
+
+        fun drawInfoRow(label: String, value: String) {
+            canvas.drawText(label, leftMargin, currentY, labelPaint)
+            canvas.drawText(value, valueMargin, currentY, valuePaint)
+            canvas.drawLine(valueMargin - 10f, currentY + 10f, lineRight, currentY + 10f, linePaint)
+            currentY += 60f
+        }
+
+        drawInfoRow("Address:", address)
+        drawInfoRow("Email ID:", email)
+        drawInfoRow("Validity:", validity)
+        drawInfoRow("Issue Date:", date)
+
+        currentY += 40f
+        // Description
+        val descPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#444444")
+            textSize = 25f
+            typeface = Typeface.create(Typeface.SERIF, Typeface.NORMAL)
+            textAlign = Paint.Align.CENTER
+        }
+        canvas.drawText(
+            "has been recognized as a valued supporter of the Mizo Go Bible ministry.",
+            width / 2f,
+            currentY,
+            descPaint
+        )
+        currentY += 40f
+        canvas.drawText(
+            "May the Word of the Lord continue to guide and inspire your journey of faith.",
+            width / 2f,
+            currentY,
+            descPaint
+        )
+
+        // Footer
+        val footerY = height - 120f
+        val footerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#333333")
+            textSize = 24f
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+        }
+        val footerSubPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#777777")
+            textSize = 20f
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+        }
+
+        // Left signature line
+        canvas.drawLine(100f, footerY - 40f, 360f, footerY - 40f, linePaint)
+        canvas.drawText("Khampat Media", 100f, footerY, footerPaint)
+        canvas.drawText("Authorized Signature", 100f, footerY + 28f, footerSubPaint)
+
+        // Right administration
+        val rightAlignPaint = Paint(footerPaint).apply { textAlign = Paint.Align.RIGHT }
+        val rightSubAlignPaint = Paint(footerSubPaint).apply { textAlign = Paint.Align.RIGHT }
+        canvas.drawLine(width - 360f, footerY - 40f, width - 100f, footerY - 40f, linePaint)
+        canvas.drawText("Mizo Go Bible", width - 100f, footerY, rightAlignPaint)
+        canvas.drawText("Administration", width - 100f, footerY + 28f, rightSubAlignPaint)
+
+        return bitmap
     }
 
 
@@ -696,26 +872,31 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
 
         val bottomNav = binding.appBarMain.bottomNavView
         val btnDrawer = binding.appBarMain.btnBottomDrawer
-        val btnPin = binding.appBarMain.btnBottomPin
         val nhf =
             supportFragmentManager.findFragmentById(R.id.nav_host_fragment_content_main) as? NavHostFragment
         val navController = nhf?.navController
 
+        val isPinOrBookmark = navController?.currentDestination?.id == R.id.nav_pin ||
+                navController?.currentDestination?.id == R.id.nav_bookmark
+
         if (layoutStyle == "Modern") {
             bottomNav.visibility = View.GONE
             btnDrawer.visibility = View.VISIBLE
-            btnPin.visibility = View.VISIBLE
             binding.appBarMain.toolbar.navigationIcon = null
             supportActionBar?.setDisplayHomeAsUpEnabled(false)
         } else {
             // Classic Layout (Default)
             bottomNav.visibility = View.VISIBLE
             btnDrawer.visibility = View.GONE
-            btnPin.visibility = View.GONE
-            if (navController != null) {
-                setupActionBarWithNavController(navController, appBarConfiguration)
+            if (isPinOrBookmark) {
+                binding.appBarMain.toolbar.navigationIcon = null
+                supportActionBar?.setDisplayHomeAsUpEnabled(false)
+            } else {
+                if (navController != null) {
+                    setupActionBarWithNavController(navController, appBarConfiguration)
+                }
+                supportActionBar?.setDisplayHomeAsUpEnabled(true)
             }
-            supportActionBar?.setDisplayHomeAsUpEnabled(true)
         }
     }
 
@@ -914,21 +1095,111 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         }
     }
 
+    private var toolbarSearchWatcher: TextWatcher? = null
+
+    fun setupToolbarSearch(
+        hint: String,
+        onQueryChanged: (String) -> Unit
+    ) {
+        val searchContainer = binding.appBarMain.toolbarSearchContainer
+        val editSearch = binding.appBarMain.editToolbarSearch
+        val btnClear = binding.appBarMain.btnToolbarSearchClear
+        val btnBack = binding.appBarMain.btnToolbarSearchBack
+
+        searchContainer.visibility = View.VISIBLE
+        binding.appBarMain.toolbarChapterSelector.visibility = View.GONE
+        binding.appBarMain.layoutTitlesContainer.visibility = View.GONE
+        binding.appBarMain.layoutToolbarButtons.visibility = View.GONE
+        binding.appBarMain.layoutSplitHeader.visibility = View.GONE
+
+        binding.appBarMain.toolbar.navigationIcon = null
+        supportActionBar?.setDisplayHomeAsUpEnabled(false)
+
+        editSearch.hint = hint
+
+        toolbarSearchWatcher?.let { editSearch.removeTextChangedListener(it) }
+        editSearch.text?.clear()
+        btnClear.visibility = View.GONE
+        applyThemeColors()
+
+        val watcher = object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val q = s?.toString() ?: ""
+                btnClear.visibility = if (q.isNotEmpty()) View.VISIBLE else View.GONE
+                onQueryChanged(q)
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        }
+        toolbarSearchWatcher = watcher
+        editSearch.addTextChangedListener(watcher)
+
+        editSearch.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                imm?.hideSoftInputFromWindow(editSearch.windowToken, 0)
+                true
+            } else {
+                false
+            }
+        }
+
+        btnClear.setOnClickListener {
+            editSearch.text?.clear()
+        }
+
+        btnBack.setOnClickListener {
+            val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+            imm?.hideSoftInputFromWindow(editSearch.windowToken, 0)
+            val nav = findNavController(R.id.nav_host_fragment_content_main)
+            if (!nav.navigateUp()) {
+                nav.popBackStack()
+            }
+        }
+    }
+
+    fun clearToolbarSearch() {
+        toolbarSearchWatcher?.let {
+            binding.appBarMain.editToolbarSearch.removeTextChangedListener(it)
+        }
+        toolbarSearchWatcher = null
+        binding.appBarMain.editToolbarSearch.text?.clear()
+        binding.appBarMain.toolbarSearchContainer.visibility = View.GONE
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.hideSoftInputFromWindow(binding.appBarMain.editToolbarSearch.windowToken, 0)
+    }
+
     fun refreshToolbarSelector() {
         val nhf =
             supportFragmentManager.findFragmentById(R.id.nav_host_fragment_content_main) as? NavHostFragment
         val currentDest = nhf?.navController?.currentDestination
         val isTransform = currentDest?.id == R.id.nav_home
+        val isPinOrBookmark = currentDest?.id == R.id.nav_pin || currentDest?.id == R.id.nav_bookmark
         val isLandscape = resources.configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        binding.appBarMain.toolbarChapterSelector.visibility =
-            if (isTransform && isLandscape) View.VISIBLE else View.GONE
-        binding.appBarMain.layoutTitlesContainer.visibility =
-            if (isTransform && isLandscape) View.GONE else View.VISIBLE
-        binding.appBarMain.layoutToolbarButtons.visibility =
-            if (isTransform) View.VISIBLE else View.GONE
-        binding.appBarMain.layoutSplitHeader.visibility =
-            if (viewModel.isSplitMode.value && isTransform) View.VISIBLE else View.GONE
-        updateToolbarText()
+
+        if (isPinOrBookmark) {
+            binding.appBarMain.toolbarSearchContainer.visibility = View.VISIBLE
+            binding.appBarMain.toolbarChapterSelector.visibility = View.GONE
+            binding.appBarMain.layoutTitlesContainer.visibility = View.GONE
+            binding.appBarMain.layoutToolbarButtons.visibility = View.GONE
+            binding.appBarMain.layoutSplitHeader.visibility = View.GONE
+            binding.appBarMain.toolbar.navigationIcon = null
+            supportActionBar?.setDisplayHomeAsUpEnabled(false)
+            binding.appBarMain.editToolbarSearch.hint =
+                if (currentDest?.id == R.id.nav_pin) "Pin Date Search" else "Bookmark Title Search"
+            applyThemeColors()
+        } else {
+            binding.appBarMain.toolbarSearchContainer.visibility = View.GONE
+            binding.appBarMain.toolbarChapterSelector.visibility =
+                if (isTransform && isLandscape) View.VISIBLE else View.GONE
+            binding.appBarMain.layoutTitlesContainer.visibility =
+                if (isTransform && isLandscape) View.GONE else View.VISIBLE
+            binding.appBarMain.layoutToolbarButtons.visibility =
+                if (isTransform) View.VISIBLE else View.GONE
+            binding.appBarMain.layoutSplitHeader.visibility = View.GONE
+            applyThemeColors()
+            updateToolbarText()
+        }
     }
 
     fun updateToolbarText() {
@@ -946,15 +1217,20 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
                 View.VISIBLE; binding.appBarMain.textToolbarFragmentTitle.visibility = View.GONE
         } else {
             binding.appBarMain.textToolbarBibleRef.visibility = View.GONE
-            val destName = when (currentDest?.id) {
-                R.id.nav_bookmark -> getString(R.string.menu_bookmark); R.id.nav_pin -> getString(R.string.menu_pin); R.id.nav_search -> getString(
-                    R.string.menu_search
-                ); R.id.nav_you -> getString(R.string.menu_you); R.id.nav_settings -> getString(R.string.menu_settings); R.id.nav_quiz -> "Bible Quiz"; R.id.nav_note -> getString(
-                    R.string.menu_note
-                ); else -> currentDest?.label?.toString() ?: ""
+            if (currentDest?.id == R.id.nav_pin || currentDest?.id == R.id.nav_bookmark) {
+                binding.appBarMain.textToolbarFragmentTitle.visibility = View.GONE
+            } else {
+                val destName = when (currentDest?.id) {
+                    R.id.nav_search -> getString(R.string.menu_search)
+                    R.id.nav_you -> getString(R.string.menu_you)
+                    R.id.nav_settings -> getString(R.string.menu_settings)
+                    R.id.nav_quiz -> "Bible Quiz"
+                    R.id.nav_note -> getString(R.string.menu_note)
+                    else -> currentDest?.label?.toString() ?: ""
+                }
+                binding.appBarMain.textToolbarFragmentTitle.text =
+                    destName; binding.appBarMain.textToolbarFragmentTitle.visibility = View.VISIBLE
             }
-            binding.appBarMain.textToolbarFragmentTitle.text =
-                destName; binding.appBarMain.textToolbarFragmentTitle.visibility = View.VISIBLE
         }
     }
 
@@ -1155,15 +1431,17 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         BibleVersionDialog().show(supportFragmentManager, "BibleVersionDialog")
     }
 
-    private fun getVersionDisplayName(v: String): String = when (v.lowercase().trim()) {
-        "verse", "mizo go bible", "mgb", "mzov", "pericope", "percope" -> "MzOV"
-        "kjv", "kjb" -> "KJV"
-        "hindi" -> "HINDI"
-        "greek", "greek (grk)" -> "GRK"
-        "burmesebible" -> "MYJ"
-        "niv" -> "NIV"
-        "mzcl" -> "MzCL"
-        else -> v.uppercase()
+    companion object {
+        fun getVersionDisplayName(v: String): String = when (v.lowercase().trim()) {
+            "verse", "mizo go bible", "mgb", "mzov", "pericope", "percope" -> "MzOV"
+            "kjv", "kjb" -> "KJV"
+            "hindi" -> "HINDI"
+            "greek", "greek (grk)" -> "GRK"
+            "burmesebible" -> "MYJ"
+            "niv" -> "NIV"
+            "mzcl" -> "MzCL"
+            else -> v.uppercase()
+        }
     }
 
     private fun getFullVersionName(v: String): String = when (v.lowercase().trim()) {
@@ -1291,11 +1569,11 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
     private fun setupSplitLabel() {
         lifecycleScope.launch {
             viewModel.isSplitMode.collectLatest {
-                val isTransform =
-                    (supportFragmentManager.findFragmentById(R.id.nav_host_fragment_content_main) as? NavHostFragment)?.navController?.currentDestination?.id == R.id.nav_home; binding.appBarMain.layoutSplitHeader.visibility =
-                if (it && isTransform) View.VISIBLE else View.GONE; updateSplitLabelText(); (binding.navView.menu.findItem(
-                R.id.split
-            )?.actionView as? MaterialSwitch)?.isChecked = it
+                binding.appBarMain.layoutSplitHeader.visibility = View.GONE
+                updateSplitLabelText()
+                (binding.navView.menu.findItem(
+                    R.id.split
+                )?.actionView as? MaterialSwitch)?.isChecked = it
             }
         }
         lifecycleScope.launch { viewModel.splitVersion.collectLatest { updateSplitLabelText() } }
@@ -1305,7 +1583,7 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
 
     private fun updateSplitLabelText() {
         binding.appBarMain.textSplitVersionLabel.text =
-            "Parallel: ${getVersionDisplayName(viewModel.splitVersion.value)}"
+            getVersionDisplayName(viewModel.splitVersion.value)
     }
 
     private fun setupSplitModeToggle(navView: NavigationView?) {
@@ -1318,7 +1596,7 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         }
     }
 
-    private fun showSplitVersionSelectionDialog(switch: MaterialSwitch? = null) {
+    fun showSplitVersionSelectionDialog(switch: MaterialSwitch? = null) {
         val versions = viewModel.availableVersions.value ?: emptyList()
         val versionPairs = versions.filter {
             val up = it.uppercase().trim()
@@ -1362,6 +1640,197 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
                 ); setBackgroundDrawable(ColorDrawable(tv.data))
             }
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        authStateListener?.let {
+            FirebaseAuth.getInstance().removeAuthStateListener(it)
+        }
+    }
+
+    fun applyThemeColors() {
+        val toolbarColor = ThemeHelper.getEffectiveToolbarColor(this)
+        window.decorView.setBackgroundColor(toolbarColor)
+        window.setBackgroundDrawable(ColorDrawable(toolbarColor))
+        binding.drawerLayout.setBackgroundColor(toolbarColor)
+        binding.appBarMain.contentMain.contentMainRoot.setBackgroundColor(toolbarColor)
+
+        val effectiveFontColor = ThemeHelper.getEffectiveFontColor(this)
+        val effectiveIconColor = ThemeHelper.getEffectiveIconColor(this)
+
+        binding.appBarMain.appBarLayout.setBackgroundColor(toolbarColor)
+        binding.appBarMain.appBarLayout.backgroundTintList = ColorStateList.valueOf(toolbarColor)
+        binding.appBarMain.toolbar.setBackgroundColor(toolbarColor)
+        binding.appBarMain.toolbarSearchContainer.setBackgroundColor(toolbarColor)
+
+        val isToolbarDark = ThemeHelper.isColorDark(toolbarColor)
+        androidx.core.view.WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = !isToolbarDark
+        androidx.core.view.WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightNavigationBars = !isToolbarDark
+
+        val tbTextColor = ThemeHelper.getContrastingTextColor(toolbarColor, effectiveFontColor)
+        val tbIconColor = effectiveIconColor?.let { ThemeHelper.getContrastingTextColor(toolbarColor, it) } ?: tbTextColor
+
+        binding.appBarMain.toolbar.setTitleTextColor(tbTextColor)
+        binding.appBarMain.toolbar.setSubtitleTextColor(ColorUtils.setAlphaComponent(tbTextColor, 180))
+        binding.appBarMain.toolbar.navigationIcon?.setTint(tbIconColor)
+        binding.appBarMain.toolbar.overflowIcon?.setTint(tbIconColor)
+        binding.appBarMain.toolbar.collapseIcon?.setTint(tbIconColor)
+
+        binding.appBarMain.textCurrentSelection.setTextColor(tbTextColor)
+        binding.appBarMain.textSelectionToolbar.setTextColor(tbTextColor)
+        binding.appBarMain.textToolbarBibleRef.setTextColor(tbTextColor)
+        binding.appBarMain.textToolbarFragmentTitle.setTextColor(tbTextColor)
+        binding.appBarMain.textVersionSelector.setTextColor(tbTextColor)
+        TextViewCompat.setCompoundDrawableTintList(binding.appBarMain.textVersionSelector, ColorStateList.valueOf(tbIconColor))
+
+        val cardColor = ThemeHelper.getEffectiveCardColor(this)
+
+        // Dynamic theme-aware styling for Toolbar Search Pill (Bookmark & Pin screens)
+        val searchPill = binding.appBarMain.layoutToolbarSearchPill
+        val searchIcon = binding.appBarMain.iconToolbarSearchPill
+        val editSearch = binding.appBarMain.editToolbarSearch
+        val btnClear = binding.appBarMain.btnToolbarSearchClear
+        val btnBack = binding.appBarMain.btnToolbarSearchBack
+
+        val pillDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 24f * resources.displayMetrics.density
+            val pillColor = if (cardColor != null && cardColor != toolbarColor) {
+                cardColor
+            } else if (isToolbarDark) {
+                ColorUtils.setAlphaComponent(Color.WHITE, 40)
+            } else {
+                ColorUtils.setAlphaComponent(Color.BLACK, 20)
+            }
+            setColor(pillColor)
+            val strokeColor = if (isToolbarDark) {
+                ColorUtils.setAlphaComponent(Color.WHITE, 55)
+            } else {
+                ColorUtils.setAlphaComponent(Color.BLACK, 35)
+            }
+            setStroke((1 * resources.displayMetrics.density).toInt(), strokeColor)
+        }
+        searchPill?.background = pillDrawable
+        if (searchIcon != null) {
+            ImageViewCompat.setImageTintList(searchIcon, ColorStateList.valueOf(tbIconColor))
+            searchIcon.setColorFilter(tbIconColor)
+        }
+        editSearch.setTextColor(tbTextColor)
+        editSearch.setHintTextColor(ColorUtils.setAlphaComponent(tbTextColor, 140))
+        ImageViewCompat.setImageTintList(btnClear, ColorStateList.valueOf(tbIconColor))
+        btnClear.setColorFilter(tbIconColor)
+        ImageViewCompat.setImageTintList(btnBack, ColorStateList.valueOf(tbIconColor))
+        btnBack.setColorFilter(tbIconColor)
+
+        val toolbarIcons = mutableListOf(
+            binding.appBarMain.btnPrevToolbar,
+            binding.appBarMain.btnNextToolbar,
+            binding.appBarMain.btnToolbarSearch,
+            binding.appBarMain.btnToolbarFont,
+            binding.appBarMain.btnBottomDrawer,
+            binding.appBarMain.btnPrevChapter,
+            binding.appBarMain.btnNextChapter,
+            binding.appBarMain.btnNavBack,
+            binding.appBarMain.btnNavForward,
+            binding.appBarMain.btnToolbarSearchClear,
+            binding.appBarMain.btnToolbarSearchBack
+        )
+        searchIcon?.let { toolbarIcons.add(it) }
+        for (iconView in toolbarIcons) {
+            ImageViewCompat.setImageTintList(iconView, ColorStateList.valueOf(tbIconColor))
+            iconView.setColorFilter(tbIconColor)
+        }
+
+        if (cardColor != null) {
+            binding.appBarMain.layoutSelector.setCardBackgroundColor(cardColor)
+            binding.appBarMain.navHistoryContainer.setCardBackgroundColor(cardColor)
+        }
+
+        binding.appBarMain.bottomNavView.setBackgroundColor(toolbarColor)
+        binding.navView.setBackgroundColor(toolbarColor)
+
+        val primaryColor = ThemeHelper.getPrimaryColor(this)
+        val states = arrayOf(
+            intArrayOf(android.R.attr.state_checked),
+            intArrayOf(-android.R.attr.state_checked)
+        )
+        val iconChecked = effectiveIconColor ?: primaryColor
+        val iconColors = intArrayOf(
+            iconChecked,
+            ColorUtils.setAlphaComponent(tbTextColor, 160)
+        )
+        val iconStateList = ColorStateList(states, iconColors)
+        binding.appBarMain.bottomNavView.itemIconTintList = iconStateList
+        binding.navView.itemIconTintList = iconStateList
+
+        val textChecked = effectiveFontColor ?: primaryColor
+        val textColors = intArrayOf(
+            textChecked,
+            ColorUtils.setAlphaComponent(tbTextColor, 160)
+        )
+        val textStateList = ColorStateList(states, textColors)
+        binding.appBarMain.bottomNavView.itemTextColor = textStateList
+        binding.navView.itemTextColor = textStateList
+
+        if (binding.navView.headerCount > 0) {
+            val headerView = binding.navView.getHeaderView(0)
+            ThemeHelper.applyColorsRecursively(headerView, cardColor, effectiveFontColor, effectiveIconColor)
+        }
+
+        ThemeHelper.applyColorsRecursively(binding.root, cardColor, effectiveFontColor, effectiveIconColor)
+
+        fun applyToFm(fm: androidx.fragment.app.FragmentManager) {
+            for (fragment in fm.fragments) {
+                if (fragment is com.zoliana.khampat.mizobible.ui.reflow.ReflowFragment) {
+                    fragment.applyTheme()
+                } else if (fragment is com.zoliana.khampat.mizobible.ui.slideshow.SlideshowFragment) {
+                    fragment.applyTheme()
+                } else if (fragment is com.zoliana.khampat.mizobible.ui.transform.TransformFragment) {
+                    fragment.applyTheme()
+                } else {
+                    fragment.view?.let { v ->
+                        ThemeHelper.applyThemeToView(this, v)
+                    }
+                }
+                applyToFm(fragment.childFragmentManager)
+            }
+        }
+        applyToFm(supportFragmentManager)
+    }
+
+    private fun applyCustomThemeBackground() {
+        applyThemeColors()
+
+        supportFragmentManager.registerFragmentLifecycleCallbacks(object : androidx.fragment.app.FragmentManager.FragmentLifecycleCallbacks() {
+            override fun onFragmentViewCreated(fm: androidx.fragment.app.FragmentManager, f: androidx.fragment.app.Fragment, v: View, savedInstanceState: Bundle?) {
+                super.onFragmentViewCreated(fm, f, v, savedInstanceState)
+                if (f is com.zoliana.khampat.mizobible.ui.reflow.ReflowFragment) {
+                    f.applyTheme()
+                } else if (f is com.zoliana.khampat.mizobible.ui.slideshow.SlideshowFragment) {
+                    f.applyTheme()
+                } else if (f is com.zoliana.khampat.mizobible.ui.transform.TransformFragment) {
+                    f.applyTheme()
+                } else {
+                    ThemeHelper.applyThemeToView(this@MainActivity, v)
+                }
+            }
+
+            override fun onFragmentResumed(fm: androidx.fragment.app.FragmentManager, f: androidx.fragment.app.Fragment) {
+                super.onFragmentResumed(fm, f)
+                if (f is com.zoliana.khampat.mizobible.ui.reflow.ReflowFragment) {
+                    f.applyTheme()
+                } else if (f is com.zoliana.khampat.mizobible.ui.slideshow.SlideshowFragment) {
+                    f.applyTheme()
+                } else if (f is com.zoliana.khampat.mizobible.ui.transform.TransformFragment) {
+                    f.applyTheme()
+                } else {
+                    f.view?.let { v ->
+                        ThemeHelper.applyThemeToView(this@MainActivity, v)
+                    }
+                }
+            }
+        }, true)
     }
 
     override fun onSupportNavigateUp(): Boolean =

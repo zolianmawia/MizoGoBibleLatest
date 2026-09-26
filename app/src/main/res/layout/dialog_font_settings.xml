@@ -52,7 +52,7 @@
                     android:layout_height="wrap_content"
                     android:padding="12dp"
                     android:text="Sam 23:1 - Lalpa chu min vengtu a ni a, ka tlachham lo vang."
-                    android:textColor="?attr/colorOnSurface"
+                    android:textColor="@color/bible_verse_text"
                     android:textSize="20sp" />
             </com.google.android.material.card.MaterialCardView>
 
@@ -76,6 +76,47 @@
                 tools:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
                 tools:listitem="@android:layout/simple_list_item_1"
                 tools:orientation="horizontal" />
+
+            <!-- Font Color Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:alpha="0.6"
+                    android:text="Font &amp; System Color (Text &amp; Icon)"
+                    android:textAllCaps="true"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_font_color_picker"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="32dp"
+                    android:minWidth="0dp"
+                    android:paddingHorizontal="8dp"
+                    android:text="Color Picker"
+                    android:textSize="10sp"
+                    app:icon="@drawable/ic_palette_24"
+                    app:iconSize="12dp" />
+            </LinearLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/recycler_font_colors"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:clipToPadding="false"
+                android:orientation="horizontal"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                tools:listitem="@layout/item_color_swatch" />
 
             <!-- Font Size -->
             <LinearLayout

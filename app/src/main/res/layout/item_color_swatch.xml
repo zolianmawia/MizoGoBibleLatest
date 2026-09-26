@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:gravity="center_horizontal"
+    android:orientation="vertical"
+    android:padding="6dp">
+
+    <FrameLayout
+        android:id="@+id/layout_swatch_container"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="?attr/selectableItemBackgroundBorderless">
+
+        <!-- Outer Ring (shown when selected) -->
+        <View
+            android:id="@+id/view_selection_ring"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_swatch_ring"
+            android:visibility="gone"
+            tools:visibility="visible" />
+
+        <!-- Inner Color Circle -->
+        <View
+            android:id="@+id/view_color_circle"
+            android:layout_width="38dp"
+            android:layout_height="38dp"
+            android:layout_gravity="center"
+            android:background="@drawable/bg_swatch_circle" />
+
+        <!-- Checkmark icon -->
+        <ImageView
+            android:id="@+id/icon_checkmark"
+            android:layout_width="20dp"
+            android:layout_height="20dp"
+            android:layout_gravity="center"
+            android:src="@drawable/ic_check_24"
+            android:visibility="gone"
+            app:tint="@color/white"
+            tools:visibility="visible" />
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/text_color_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:gravity="center"
+        android:maxWidth="64dp"
+        android:maxLines="2"
+        android:textColor="?attr/colorOnSurface"
+        android:textSize="10sp"
+        tools:text="Classic Blue" />
+</LinearLayout>

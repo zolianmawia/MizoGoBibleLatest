@@ -179,6 +179,83 @@
                         app:tint="?attr/colorOnSurface" />
 
                 </LinearLayout>
+
+                <!-- Search container in Toolbar (Full width for Pin and Bookmark screens) -->
+                <LinearLayout
+                    android:id="@+id/toolbar_search_container"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingEnd="8dp"
+                    android:visibility="gone"
+                    app:layout_constraintBottom_toBottomOf="parent"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent"
+                    tools:visibility="visible">
+
+                    <ImageButton
+                        android:id="@+id/btn_toolbar_search_back"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Back"
+                        android:padding="10dp"
+                        android:scaleType="fitCenter"
+                        android:src="@drawable/ic_arrow_back_24"
+                        app:tint="?attr/colorOnSurface" />
+
+                    <LinearLayout
+                        android:id="@+id/layout_toolbar_search_pill"
+                        android:layout_width="0dp"
+                        android:layout_height="42dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="2dp"
+                        android:layout_marginEnd="6dp"
+                        android:background="@drawable/bg_search_pill"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="14dp">
+
+                        <ImageView
+                            android:id="@+id/icon_toolbar_search_pill"
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:contentDescription="Search Icon"
+                            android:src="@drawable/ic_search_24"
+                            app:tint="?attr/colorOnSurface" />
+
+                        <EditText
+                            android:id="@+id/edit_toolbar_search"
+                            android:layout_width="0dp"
+                            android:layout_height="match_parent"
+                            android:layout_weight="1"
+                            android:layout_marginStart="10dp"
+                            android:layout_marginEnd="6dp"
+                            android:background="@null"
+                            android:hint="Bookmark Title Search"
+                            android:imeOptions="actionSearch"
+                            android:inputType="text"
+                            android:maxLines="1"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textColorHint="?attr/colorOnSurfaceVariant"
+                            android:textSize="15.5sp" />
+
+                        <ImageButton
+                            android:id="@+id/btn_toolbar_search_clear"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="Clear"
+                            android:padding="6dp"
+                            android:scaleType="fitCenter"
+                            android:src="@drawable/ic_close_24"
+                            android:visibility="gone"
+                            app:tint="?attr/colorOnSurface"
+                            tools:visibility="visible" />
+                    </LinearLayout>
+                </LinearLayout>
             </androidx.constraintlayout.widget.ConstraintLayout>
 
         </androidx.appcompat.widget.Toolbar>
@@ -375,31 +452,12 @@
                 <!-- Next Chapter -->
                 <ImageView
                     android:id="@+id/btn_next_chapter"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="Next"
-                    android:padding="10dp"
+                    android:padding="12dp"
                     android:src="@drawable/ic_chevron_right_24"
-                    app:tint="?attr/colorOnSurface" />
-
-                <View
-                    android:layout_width="1dp"
-                    android:layout_height="24dp"
-                    android:layout_marginStart="2dp"
-                    android:alpha="0.15"
-                    android:background="?attr/colorOnSurface" />
-
-                <!-- Pin Palette Button -->
-                <ImageButton
-                    android:id="@+id/btn_bottom_pin"
-                    android:layout_width="44dp"
-                    android:layout_height="44dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Pin Palette"
-                    android:padding="10dp"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/ic_pin_24"
                     app:tint="?attr/colorOnSurface" />
 
             </LinearLayout>

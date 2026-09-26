@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="mgb_version_text">@color/white</color>
+    <color name="mgb_version_text">#D3D4F2</color>
     <color name="mgb_version_background">@color/black</color>
 
-    <!-- Backup old bottom bar color: #EBE2CF -->
-    <color name="bottom_nav_card_bg">#25282B</color>
-    <color name="bottom_nav_card_stroke">#3A3E42</color>
+    <!-- Bible verse text color: Black in light mode, #D3D4F2 in dark mode -->
+    <color name="bible_verse_text">#D3D4F2</color>
+
+    <!-- Bottom bar colors matched to #222333 theme -->
+    <color name="bottom_nav_card_bg">#2A2B3E</color>
+    <color name="bottom_nav_card_stroke">#3A3C55</color>
+
+    <color name="bookmark_action_btn_bg">#2E415A</color>
+    <color name="bottom_sheet_bg">#222333</color>
+    <color name="verse_preview_card_bg">#2A2B3E</color>
 </resources>

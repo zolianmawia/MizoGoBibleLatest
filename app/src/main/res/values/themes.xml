@@ -64,4 +64,113 @@
     <!-- Overlay fixed: Using Light for default theme -->
     <style name="Theme.MizoGoBible.AppBarOverlay" parent="ThemeOverlay.Material3.Light" />
     <style name="Theme.MizoGoBible.PopupOverlay" parent="ThemeOverlay.Material3.Light" />
+
+    <!-- Color Theme Variants (Day / Light) -->
+    <style name="Theme.MizoGoBible.NoActionBar.Blue" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#1976D2</item>
+        <item name="colorPrimaryContainer">#D3E4FF</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorOnPrimaryContainer">#001C38</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Green" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#2E7D32</item>
+        <item name="colorPrimaryContainer">#C8E6C9</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorOnPrimaryContainer">#002204</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Wine" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#880E4F</item>
+        <item name="colorPrimaryContainer">#F8BBD0</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorOnPrimaryContainer">#37001A</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Purple" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#6A1B9A</item>
+        <item name="colorPrimaryContainer">#E1BEE7</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorOnPrimaryContainer">#280047</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Amber" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#D84315</item>
+        <item name="colorPrimaryContainer">#FFCCBC</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorOnPrimaryContainer">#3E0E00</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Teal" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#00796B</item>
+        <item name="colorPrimaryContainer">#B2DFDB</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorOnPrimaryContainer">#00201B</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Navy" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#1A237E</item>
+        <item name="colorPrimaryContainer">#C5CAE9</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorOnPrimaryContainer">#08114A</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Brown" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#5D4037</item>
+        <item name="colorPrimaryContainer">#D7CCC8</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorOnPrimaryContainer">#211512</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Charcoal" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#37474F</item>
+        <item name="colorPrimaryContainer">#CFD8DC</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorOnPrimaryContainer">#131A1D</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Rose" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#C2185B</item>
+        <item name="colorPrimaryContainer">#F8BBD0</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorOnPrimaryContainer">#3E001B</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Red" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#D32F2F</item>
+        <item name="colorPrimaryContainer">#FFCDD2</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorOnPrimaryContainer">#410002</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Yellow" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#D84315</item>
+        <item name="colorPrimaryContainer">#FFECB3</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorOnPrimaryContainer">#3E0E00</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.White" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#1976D2</item>
+        <item name="colorPrimaryContainer">#E0E0E0</item>
+        <item name="colorOnPrimary">#FFFFFF</item>
+        <item name="colorOnPrimaryContainer">#212121</item>
+    </style>
+
+    <!-- Overlay styles for Sepia and AMOLED -->
+    <style name="Overlay.Sepia" parent="">
+        <item name="android:windowBackground">#F4ECD8</item>
+        <item name="colorSurface">#F4ECD8</item>
+        <item name="colorOnSurface">#2C2519</item>
+        <item name="colorSurfaceVariant">#E5D9C0</item>
+        <item name="colorSecondaryContainer">#E5D9C0</item>
+    </style>
+
+    <style name="Overlay.Amoled" parent="">
+        <item name="android:windowBackground">#000000</item>
+        <item name="colorSurface">#000000</item>
+        <item name="colorSurfaceVariant">#121212</item>
+        <item name="colorOnSurface">#E0E0E0</item>
+        <item name="colorSecondaryContainer">#1C1C1C</item>
+    </style>
 </resources>

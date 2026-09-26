@@ -6,12 +6,15 @@ import android.text.Spanned
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
+import com.zoliana.khampat.mizobible.R
 import com.zoliana.khampat.mizobible.data.Note
 import com.zoliana.khampat.mizobible.databinding.ItemNoteBinding
 import com.zoliana.khampat.mizobible.ui.transform.WavyUnderlineSpan
+import com.zoliana.khampat.mizobible.utils.ThemeHelper
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -75,18 +78,21 @@ class NoteAdapter(
             binding.textNoteDate.text = sdf.format(Date(note.timestamp))
 
             val context = binding.root.context
-            val isDarkTheme = (context.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
+            val bgColor = ThemeHelper.getEffectiveBackgroundColor(context)
+            val customFontColorHex = ThemeHelper.getFontColor(context)
+            val customFontColor = try {
+                if (customFontColorHex.isNotBlank() && customFontColorHex != "default") {
+                    Color.parseColor(customFontColorHex)
+                } else null
+            } catch (_: Exception) { null }
+            val finalNoteTextColor = ThemeHelper.getContrastingTextColor(bgColor, customFontColor)
+            val dateColor = if (ThemeHelper.isColorDark(bgColor)) Color.parseColor("#A0A2B8") else Color.parseColor("#5A5245")
             
-            if (isDarkTheme) {
-                binding.textNoteContent.setTextColor(Color.WHITE)
-                binding.textNoteDate.setTextColor(Color.GRAY)
-                if (note.bibleText.isNotEmpty()) {
-                    binding.textBibleContent.setTextColor(Color.LTGRAY)
-                    binding.textNoteVersion?.setTextColor(Color.WHITE)
-                }
-            } else {
-                binding.textNoteContent.setTextColor(Color.BLACK)
-                binding.textBibleContent.setTextColor(Color.DKGRAY)
+            binding.textNoteContent.setTextColor(finalNoteTextColor)
+            binding.textNoteDate.setTextColor(dateColor)
+            if (note.bibleText.isNotEmpty()) {
+                binding.textBibleContent.setTextColor(finalNoteTextColor)
+                binding.textNoteVersion?.setTextColor(finalNoteTextColor)
             }
 
             binding.viewNoteColor.visibility = View.GONE

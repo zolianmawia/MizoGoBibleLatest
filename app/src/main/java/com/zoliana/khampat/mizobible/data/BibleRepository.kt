@@ -45,6 +45,9 @@ class BibleRepository(val bibleDao: BibleDao, val userDao: UserDao) {
         }
     }
 
+    suspend fun searchVersesRaw(query: androidx.sqlite.db.SupportSQLiteQuery): List<BibleVerse> =
+        bibleDao.searchVersesRaw(query)
+
     fun searchByBookChapterVerse(version: String, bookName: String, bookPattern: String, chapter: Int, verse: String): Flow<List<BibleVerse>> =
         bibleDao.searchByBookChapterVerse(version, bookName, bookPattern, chapter, verse)
 

@@ -502,6 +502,12 @@ class TransformViewModel(
         fontSettings.value = settings; saveFontSettings(settings)
     }
 
+    fun updateFontColor(colorHex: String) {
+        val updated = fontSettings.value.copy(fontColor = colorHex)
+        fontSettings.value = updated
+        saveFontSettings(updated)
+    }
+
     fun updateFontSize(newSize: Float) {
         val current = fontSettings.value
         val clampedSize = newSize.coerceIn(12f, 70f)
@@ -520,18 +526,28 @@ class TransformViewModel(
             putBoolean("is_italic", settings.isItalic)
             putFloat("letter_spacing", settings.letterSpacing)
             putFloat("line_height", settings.lineHeight)
+            putString("font_color", settings.fontColor)
             apply()
         }
     }
 
-    private fun loadFontSettings(): FontSettings = FontSettings(
-        fontSize = prefs.getFloat("font_size", 18f),
-        fontFamily = prefs.getString("font_family", "Times New Roman") ?: "Times New Roman",
-        isBold = prefs.getBoolean("is_bold", false),
-        isItalic = prefs.getBoolean("is_italic", false),
-        letterSpacing = prefs.getFloat("letter_spacing", 0f),
-        lineHeight = prefs.getFloat("line_height", 1.0f)
-    )
+    private fun loadFontSettings(): FontSettings {
+        val savedFamily = prefs.getString("font_family", "Serif") ?: "Serif"
+        // Upgrade legacy "Times New Roman" setting which lacked Mizo ṭ/Ṭ glyphs
+        val safeFamily = if (savedFamily == "Times New Roman") "Serif" else savedFamily
+        val savedLineHeight = prefs.getFloat("line_height", 1.3f)
+        val safeLineHeight = if (savedLineHeight <= 1.05f) 1.3f else savedLineHeight
+
+        return FontSettings(
+            fontSize = prefs.getFloat("font_size", 18f),
+            fontFamily = safeFamily,
+            isBold = prefs.getBoolean("is_bold", false),
+            isItalic = prefs.getBoolean("is_italic", false),
+            letterSpacing = prefs.getFloat("letter_spacing", 0f),
+            lineHeight = safeLineHeight,
+            fontColor = prefs.getString("font_color", "") ?: ""
+        )
+    }
 
     fun updateSidePadding(padding: Float) {
         sidePadding.value = padding; prefs.edit().putFloat("side_padding", padding).apply()
@@ -589,6 +605,7 @@ class TransformViewModel(
                                         verse = map["verse"] as? String ?: "0",
                                         text = map["text"] as? String ?: "",
                                         version = map["version"] as? String ?: "MzOV",
+                                        title = map["title"] as? String ?: "",
                                         note = map["note"] as? String ?: "",
                                         color = map["color"] as? String ?: "#FFD740",
                                         timestamp = (map["timestamp"] as? Number)?.toLong()
@@ -686,6 +703,7 @@ class TransformViewModel(
         "verse" to verse,
         "text" to text,
         "version" to version,
+        "title" to title,
         "note" to note,
         "color" to color,
         "timestamp" to timestamp

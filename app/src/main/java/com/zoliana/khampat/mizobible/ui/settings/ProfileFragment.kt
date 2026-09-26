@@ -3,7 +3,10 @@ package com.zoliana.khampat.mizobible.ui.settings
 import android.app.Activity
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.*
@@ -26,13 +29,16 @@ import com.bumptech.glide.Glide
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
 import com.google.android.gms.common.api.ApiException
+import com.google.android.gms.common.api.CommonStatusCodes
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.zoliana.khampat.mizobible.MainActivity
 import com.zoliana.khampat.mizobible.R
+import java.security.MessageDigest
 import com.zoliana.khampat.mizobible.data.*
 import com.zoliana.khampat.mizobible.databinding.DialogLoginBinding
 import com.zoliana.khampat.mizobible.databinding.FragmentProfileBinding
@@ -88,7 +94,24 @@ class ProfileFragment : Fragment() {
         checkLoginStatus()
         viewModel.syncPublicMembers()
 
+        binding?.imgProfile?.let {
+            it.colorFilter = null
+            androidx.core.widget.ImageViewCompat.setImageTintList(it, null)
+        }
+        binding?.imgGoldBadge?.let {
+            it.colorFilter = null
+            androidx.core.widget.ImageViewCompat.setImageTintList(it, null)
+        }
+        binding?.imgSilverBadge?.let {
+            it.colorFilter = null
+            androidx.core.widget.ImageViewCompat.setImageTintList(it, null)
+        }
+
         binding?.btnLoginTrigger?.setOnClickListener { showLoginDialog() }
+        binding?.btnLoginTrigger?.setOnLongClickListener {
+            showSha1ConfigDialog()
+            true
+        }
         binding?.btnLogout?.setOnClickListener { logoutUser() }
         binding?.btnBuyPatron?.setOnClickListener { showPaymentDetailsDialog(MembershipType.SILVER) }
         binding?.btnBuyLive?.setOnClickListener { showPaymentDetailsDialog(MembershipType.GOLD) }
@@ -349,7 +372,11 @@ class ProfileFragment : Fragment() {
             binding?.textUserId?.text = user.email ?: ""
             binding?.textProfileInitial?.text = (user.displayName ?: "U").first().toString().uppercase()
             if (user.photoUrl != null) {
-                binding?.imgProfile?.let { Glide.with(this).load(user.photoUrl).circleCrop().into(it) }
+                binding?.imgProfile?.let { imgView ->
+                    imgView.colorFilter = null
+                    androidx.core.widget.ImageViewCompat.setImageTintList(imgView, null)
+                    Glide.with(this).load(user.photoUrl).circleCrop().into(imgView)
+                }
                 binding?.imgProfile?.visibility = View.VISIBLE
                 binding?.textProfileInitial?.visibility = View.GONE
                 binding?.viewProfilePlaceholder?.visibility = View.GONE
@@ -388,18 +415,82 @@ class ProfileFragment : Fragment() {
     }
 
     private val signInLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val task = GoogleSignIn.getSignedInAccountFromIntent(result.data)
-            try { 
-                val account = task.getResult(ApiException::class.java)!!
-                firebaseAuthWithGoogle(account.idToken!!) 
-            } catch (e: Exception) { 
-                val statusCode = (e as? ApiException)?.statusCode
-                Toast.makeText(context, "Login failed ($statusCode): ${e.message}", Toast.LENGTH_LONG).show()
+        val data = result.data
+        if (data != null) {
+            val task = GoogleSignIn.getSignedInAccountFromIntent(data)
+            try {
+                val account = task.getResult(ApiException::class.java)
+                if (account?.idToken != null) {
+                    firebaseAuthWithGoogle(account.idToken!!)
+                } else {
+                    Toast.makeText(context, "Google Sign-In: ID token hmuh a ni lo.", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: ApiException) {
+                val code = e.statusCode
+                val errorString = GoogleSignInStatusCodes.getStatusCodeString(code)
+                android.util.Log.e("GoogleSignIn", "ApiException code: $code ($errorString)", e)
+                if (code == GoogleSignInStatusCodes.SIGN_IN_CANCELLED) {
+                    Toast.makeText(context, "Sign-In thulh (cancelled) a ni.", Toast.LENGTH_SHORT).show()
+                } else if (code == CommonStatusCodes.DEVELOPER_ERROR || code == 10) {
+                    showSha1ConfigDialog()
+                } else {
+                    Toast.makeText(context, "Login error ($code: $errorString)", Toast.LENGTH_LONG).show()
+                }
+            } catch (e: Exception) {
+                android.util.Log.e("GoogleSignIn", "Unexpected sign-in error", e)
+                Toast.makeText(context, "Login error: ${e.message}", Toast.LENGTH_LONG).show()
             }
         } else {
-            // Google Sign-In failed or was cancelled
-            Toast.makeText(context, "Google Sign-In failed/cancelled. Check internet and Google Play Services.", Toast.LENGTH_LONG).show()
+            if (result.resultCode == Activity.RESULT_CANCELED) {
+                Toast.makeText(context, "Sign-In thulh a ni.", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(context, "Google Sign-In failed. Check internet and Google Play Services.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun showSha1ConfigDialog() {
+        val currentSha1 = getSha1Fingerprint()
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle("SHA-1 Config Ngai (Error 10)")
+            .setMessage("Google Sign-In fail chhan hi Firebase Console-a SHA-1 fingerprint la dah loh vang a ni e.\n\nHe app SHA-1:\n$currentSha1\n\nFirebase Console -> Project Settings -> SHA Certificate Fingerprints-ah he SHA-1 hi belh (Add fingerprint) rawh le.")
+            .setPositiveButton("Copy SHA-1") { _, _ ->
+                val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                clipboard.setPrimaryClip(ClipData.newPlainText("SHA1", currentSha1))
+                Toast.makeText(requireContext(), "SHA-1 copy a ni e!", Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton("Hrethiam e", null)
+            .create()
+        dialog.show()
+        (activity as? MainActivity)?.limitDialogWidth(dialog)
+    }
+
+    private fun getSha1Fingerprint(): String {
+        return try {
+            val ctx = requireContext()
+            val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                PackageManager.GET_SIGNING_CERTIFICATES
+            } else {
+                @Suppress("DEPRECATION")
+                PackageManager.GET_SIGNATURES
+            }
+            val packageInfo = ctx.packageManager.getPackageInfo(ctx.packageName, flags)
+            val signatures = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                packageInfo.signingInfo?.apkContentsSigners
+            } else {
+                @Suppress("DEPRECATION")
+                packageInfo.signatures
+            }
+            val cert = signatures?.firstOrNull()?.toByteArray()
+            if (cert != null) {
+                val md = MessageDigest.getInstance("SHA-1")
+                val digest = md.digest(cert)
+                digest.joinToString(":") { String.format("%02X", it) }
+            } else {
+                "C2:B6:90:97:AF:D5:DA:44:E0:AF:34:2B:54:C9:B2:5D:AB:25:95:93"
+            }
+        } catch (e: Exception) {
+            "C2:B6:90:97:AF:D5:DA:44:E0:AF:34:2B:54:C9:B2:5D:AB:25:95:93"
         }
     }
 
@@ -428,6 +519,22 @@ class ProfileFragment : Fragment() {
                 } 
             }.setNegativeButton("Cancel", null).show() 
         (activity as? MainActivity)?.limitDialogWidth(dialog)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        binding?.imgProfile?.let {
+            it.colorFilter = null
+            androidx.core.widget.ImageViewCompat.setImageTintList(it, null)
+        }
+        binding?.imgGoldBadge?.let {
+            it.colorFilter = null
+            androidx.core.widget.ImageViewCompat.setImageTintList(it, null)
+        }
+        binding?.imgSilverBadge?.let {
+            it.colorFilter = null
+            androidx.core.widget.ImageViewCompat.setImageTintList(it, null)
+        }
     }
 
     override fun onDestroyView() { super.onDestroyView(); _binding = null }

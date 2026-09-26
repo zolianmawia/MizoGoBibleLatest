@@ -1,21 +1,21 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Dark Mode Theme (Earthy/Dark Brown tones) -->
+    <!-- Dark Mode Theme (#222333 Slate tones) -->
     <style name="Theme.MizoGoBible" parent="Theme.Material3.Dark.NoActionBar">
         <!-- Main colors -->
         <item name="colorPrimary">#D3E4FF</item>
         <item name="colorOnPrimary">#00315C</item>
 
-        <!-- Dark Earthy Background -->
-        <item name="android:windowBackground">#1C1B17</item>
-        <item name="colorSurface">#1C1B17</item>
-        <item name="colorOnSurface">#FAF7F0</item>
+        <!-- Dark Background (#222333) -->
+        <item name="android:windowBackground">#222333</item>
+        <item name="colorSurface">#222333</item>
+        <item name="colorOnSurface">#D3D4F2</item>
 
-        <!-- Dark Earthy Variant for Search bar/containers -->
-        <item name="colorSurfaceVariant">#2D2B24</item>
-        <item name="colorOnSurfaceVariant">#C3C7D0</item>
+        <!-- Dark Variant for Search bar/containers -->
+        <item name="colorSurfaceVariant">#2E2F45</item>
+        <item name="colorOnSurfaceVariant">#C7C9DC</item>
 
-        <item name="colorSecondaryContainer">#1d1b20</item>
-        <item name="colorOnSecondaryContainer">#EBE2CF</item>
+        <item name="colorSecondaryContainer">#2E2F45</item>
+        <item name="colorOnSecondaryContainer">#D3D4F2</item>
 
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
@@ -41,4 +41,96 @@
     <!-- Overlay fixed: Using Dark for Night theme -->
     <style name="Theme.MizoGoBible.AppBarOverlay" parent="ThemeOverlay.Material3.Dark" />
     <style name="Theme.MizoGoBible.PopupOverlay" parent="ThemeOverlay.Material3.Dark" />
+
+    <!-- Color Theme Variants (Night / Dark) -->
+    <style name="Theme.MizoGoBible.NoActionBar.Blue" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#90CAF9</item>
+        <item name="colorPrimaryContainer">#0D47A1</item>
+        <item name="colorOnPrimary">#00315C</item>
+        <item name="colorOnPrimaryContainer">#D3E4FF</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Green" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#81C784</item>
+        <item name="colorPrimaryContainer">#1B5E20</item>
+        <item name="colorOnPrimary">#00330C</item>
+        <item name="colorOnPrimaryContainer">#C8E6C9</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Wine" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#F48FB1</item>
+        <item name="colorPrimaryContainer">#4A0025</item>
+        <item name="colorOnPrimary">#490022</item>
+        <item name="colorOnPrimaryContainer">#F8BBD0</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Purple" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#CE93D8</item>
+        <item name="colorPrimaryContainer">#38006B</item>
+        <item name="colorOnPrimary">#37006B</item>
+        <item name="colorOnPrimaryContainer">#E1BEE7</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Amber" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#FFAB91</item>
+        <item name="colorPrimaryContainer">#BF360C</item>
+        <item name="colorOnPrimary">#4E1200</item>
+        <item name="colorOnPrimaryContainer">#FFCCBC</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Teal" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#80CBC4</item>
+        <item name="colorPrimaryContainer">#004D40</item>
+        <item name="colorOnPrimary">#003730</item>
+        <item name="colorOnPrimaryContainer">#B2DFDB</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Navy" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#9FA8DA</item>
+        <item name="colorPrimaryContainer">#1A237E</item>
+        <item name="colorOnPrimary">#0D154F</item>
+        <item name="colorOnPrimaryContainer">#C5CAE9</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Brown" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#BCAAA4</item>
+        <item name="colorPrimaryContainer">#3E2723</item>
+        <item name="colorOnPrimary">#2F1B14</item>
+        <item name="colorOnPrimaryContainer">#D7CCC8</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Charcoal" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#B0BEC5</item>
+        <item name="colorPrimaryContainer">#263238</item>
+        <item name="colorOnPrimary">#1A2327</item>
+        <item name="colorOnPrimaryContainer">#CFD8DC</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Rose" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#F48FB1</item>
+        <item name="colorPrimaryContainer">#880E4F</item>
+        <item name="colorOnPrimary">#4A0021</item>
+        <item name="colorOnPrimaryContainer">#F8BBD0</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Red" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#EF9A9A</item>
+        <item name="colorPrimaryContainer">#B71C1C</item>
+        <item name="colorOnPrimary">#410002</item>
+        <item name="colorOnPrimaryContainer">#FFCDD2</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.Yellow" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#FFE082</item>
+        <item name="colorPrimaryContainer">#FF6F00</item>
+        <item name="colorOnPrimary">#3E0E00</item>
+        <item name="colorOnPrimaryContainer">#FFECB3</item>
+    </style>
+
+    <style name="Theme.MizoGoBible.NoActionBar.White" parent="Theme.MizoGoBible.NoActionBar">
+        <item name="colorPrimary">#90CAF9</item>
+        <item name="colorPrimaryContainer">#0D47A1</item>
+        <item name="colorOnPrimary">#00315C</item>
+        <item name="colorOnPrimaryContainer">#D3E4FF</item>
+    </style>
 </resources>

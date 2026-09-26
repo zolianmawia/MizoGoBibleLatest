@@ -158,6 +158,74 @@
             app:thumbIconSize="16dp" />
     </LinearLayout>
 
+    <!-- Smart Search Suggestion Banner -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_search_suggestion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginTop="6dp"
+        android:visibility="gone"
+        app:cardBackgroundColor="?attr/colorSecondaryContainer"
+        app:cardCornerRadius="12dp"
+        app:cardElevation="0dp"
+        app:layout_constraintTop_toBottomOf="@id/layout_fuzzy"
+        app:strokeColor="?attr/colorOutlineVariant"
+        app:strokeWidth="1dp"
+        tools:visibility="visible">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="10dp">
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginEnd="10dp"
+                android:src="@drawable/ic_search_24"
+                app:tint="?attr/colorOnSecondaryContainer" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/text_suggestion_label"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="I zawn tum zawk em ni?"
+                    android:textColor="?attr/colorOnSecondaryContainer"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/text_suggested_phrase"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    tools:text="khawngaihna chu in chungah" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/btn_apply_suggestion"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="?attr/selectableItemBackground"
+                android:padding="6dp"
+                android:text="Zawng rawh"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
     <!-- Search Results List -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recycler_search_results"
@@ -168,7 +236,7 @@
         android:paddingBottom="8dp"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         app:layout_constraintBottom_toTopOf="@id/dismiss_handle"
-        app:layout_constraintTop_toBottomOf="@id/layout_fuzzy" />
+        app:layout_constraintTop_toBottomOf="@id/card_search_suggestion" />
 
     <!-- History View -->
     <LinearLayout

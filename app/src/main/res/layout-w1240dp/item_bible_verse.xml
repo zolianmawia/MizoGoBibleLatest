@@ -20,7 +20,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:fontFamily="serif"
-            android:textColor="?attr/colorOnSurface"
+            android:textColor="@color/bible_verse_text"
             android:textSize="18sp"
             tools:text="11 The children of Bebai, six hundred twenty and three." />
 

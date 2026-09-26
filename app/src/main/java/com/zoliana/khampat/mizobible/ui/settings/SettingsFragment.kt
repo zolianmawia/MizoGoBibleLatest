@@ -26,6 +26,7 @@ import com.zoliana.khampat.mizobible.ui.transform.FontSettingsDialog
 import com.zoliana.khampat.mizobible.ui.transform.TransformViewModel
 import com.zoliana.khampat.mizobible.ui.transform.TransformViewModelFactory
 import com.zoliana.khampat.mizobible.utils.NotificationHelper
+import com.zoliana.khampat.mizobible.utils.ThemeHelper
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -62,6 +63,7 @@ class SettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        ThemeHelper.applyThemeToView(requireContext(), view)
 
         val prefs = requireContext().getSharedPreferences("bible_prefs", Context.MODE_PRIVATE)
 
@@ -118,30 +120,7 @@ class SettingsFragment : Fragment() {
         }
 
         binding.btnThemeSettings.setOnClickListener {
-            val themes = arrayOf("System Default", "Light Theme", "Night Theme")
-            val currentTheme =
-                prefs.getInt("theme_mode", AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
-
-            val checkedItem = when (currentTheme) {
-                AppCompatDelegate.MODE_NIGHT_NO -> 1
-                AppCompatDelegate.MODE_NIGHT_YES -> 2
-                else -> 0
-            }
-
-            val dialog = MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Choose Theme")
-                .setSingleChoiceItems(themes, checkedItem) { dialog, which ->
-                    val selectedMode = when (which) {
-                        1 -> AppCompatDelegate.MODE_NIGHT_NO
-                        2 -> AppCompatDelegate.MODE_NIGHT_YES
-                        else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
-                    }
-                    prefs.edit().putInt("theme_mode", selectedMode).apply()
-                    AppCompatDelegate.setDefaultNightMode(selectedMode)
-                    dialog.dismiss()
-                }
-                .show()
-            (requireActivity() as? MainActivity)?.limitDialogWidth(dialog)
+            ThemeSettingsDialog().show(parentFragmentManager, "ThemeSettings")
         }
 
         binding.btnChapterSelectorStyle?.setOnClickListener {
@@ -250,6 +229,7 @@ class SettingsFragment : Fragment() {
     override fun onResume() {
         super.onResume()
         requireActivity().findViewById<View>(R.id.bottom_container)?.visibility = View.GONE
+        ThemeHelper.applyThemeToView(requireContext(), binding.root)
     }
 
     override fun onPause() {

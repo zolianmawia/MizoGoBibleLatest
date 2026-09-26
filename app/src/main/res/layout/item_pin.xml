@@ -6,7 +6,9 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:padding="12dp"
+    android:paddingVertical="10dp"
+    android:paddingStart="20dp"
+    android:paddingEnd="12dp"
     android:background="?attr/selectableItemBackground">
 
     <CheckBox
@@ -79,7 +81,7 @@
             android:layout_marginTop="4dp"
             android:ellipsize="end"
             android:maxLines="2"
-            android:textColor="?attr/colorOnSurface"
+            android:textColor="@color/bible_verse_text"
             android:textSize="15sp"
             tools:text="Atir hmain Pathianin van leh lei a siam a." />
 

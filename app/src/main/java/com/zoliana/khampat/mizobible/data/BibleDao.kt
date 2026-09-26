@@ -4,10 +4,15 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.RawQuery
+import androidx.sqlite.db.SupportSQLiteQuery
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BibleDao {
+    @RawQuery
+    suspend fun searchVersesRaw(query: SupportSQLiteQuery): List<BibleVerse>
+
     @Query(
         """
         SELECT * FROM mizogobible 

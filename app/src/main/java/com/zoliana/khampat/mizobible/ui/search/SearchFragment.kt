@@ -286,6 +286,7 @@ class SearchFragment : Fragment() {
 
     private fun showHistory() {
         val history = getHistory()
+        binding?.cardSearchSuggestion?.visibility = View.GONE
         if (history.isNotEmpty()) {
             binding?.layoutSearchHistory?.visibility = View.VISIBLE
             binding?.recyclerSearchResults?.visibility = View.GONE
@@ -444,6 +445,7 @@ class SearchFragment : Fragment() {
         viewModel.searchResults.value = emptyList()
         searchAdapter.submitListWithQuery(emptyList(), "")
         binding?.textSearchCount?.text = "0"
+        binding?.cardSearchSuggestion?.visibility = View.GONE
         updateEmptyState(isEmpty = false)
     }
 
@@ -460,8 +462,6 @@ class SearchFragment : Fragment() {
         if (queryWithoutSpace.isEmpty() && !query.any { it.isDigit() }) return
 
         val repositoryBookFilter = if (selectedBook != "All Books") selectedBook else null
-        val fuzzyPart =
-            if (normalizedQuery.length >= 5) normalizedQuery.substring(2) else normalizedQuery
 
         val bookFilterList = when (currentFilter) {
             "OT" -> getOldTestamentBooks()
@@ -483,11 +483,11 @@ class SearchFragment : Fragment() {
                             val typedBook = match.groupValues[1].trim()
                             emitAll(
                                 viewModel.repository.searchByBookChapterVerse(
-                                    version,
-                                    getMappedBookName(typedBook),
-                                    getMappedBookName(typedBook),
-                                    match.groupValues[2].toIntOrNull() ?: 1,
-                                    match.groupValues[3]
+                                     version,
+                                     getMappedBookName(typedBook),
+                                     getMappedBookName(typedBook),
+                                     match.groupValues[2].toIntOrNull() ?: 1,
+                                     match.groupValues[3]
                                 )
                             )
                         }
@@ -497,10 +497,10 @@ class SearchFragment : Fragment() {
                             val typedBook = match.groupValues[1].trim()
                             emitAll(
                                 viewModel.repository.searchByBookAndChapter(
-                                    version,
-                                    getMappedBookName(typedBook),
-                                    getMappedBookName(typedBook),
-                                    match.groupValues[2].toIntOrNull() ?: 1
+                                     version,
+                                     getMappedBookName(typedBook),
+                                     getMappedBookName(typedBook),
+                                     match.groupValues[2].toIntOrNull() ?: 1
                                 )
                             )
                         }
@@ -509,18 +509,18 @@ class SearchFragment : Fragment() {
                             val match = chapterVersePattern.find(query)!!
                             if (selectedBook != "All Books") emitAll(
                                 viewModel.repository.searchByBookChapterVerse(
-                                    version,
-                                    selectedBook,
-                                    selectedBook,
-                                    match.groupValues[1].toIntOrNull() ?: 1,
-                                    match.groupValues[2]
+                                     version,
+                                     selectedBook,
+                                     selectedBook,
+                                     match.groupValues[1].toIntOrNull() ?: 1,
+                                     match.groupValues[2]
                                 )
                             )
                             else emitAll(
                                 viewModel.repository.searchByReference(
-                                    version,
-                                    match.groupValues[1].toIntOrNull() ?: 1,
-                                    match.groupValues[2]
+                                     version,
+                                     match.groupValues[1].toIntOrNull() ?: 1,
+                                     match.groupValues[2]
                                 )
                             )
                         }
@@ -529,10 +529,10 @@ class SearchFragment : Fragment() {
                             val match = chapterOnlyPattern.find(query)!!
                             if (selectedBook != "All Books") emitAll(
                                 viewModel.repository.searchByBookAndChapter(
-                                    version,
-                                    selectedBook,
-                                    selectedBook,
-                                    match.groupValues[1].toIntOrNull() ?: 1
+                                     version,
+                                     selectedBook,
+                                     selectedBook,
+                                     match.groupValues[1].toIntOrNull() ?: 1
                                 )
                             )
                             else emit(emptyList())
@@ -553,55 +553,58 @@ class SearchFragment : Fragment() {
                 }
             }
 
-            val textSearchFlow = if (query.length >= 2 && queryWithoutSpace.isNotEmpty()) {
-                if (viewModel.searchFuzzyEnabled.value) {
-                    viewModel.repository.searchBroad(
-                        version,
-                        normalizedQuery,
-                        queryWithoutSpace,
-                        fuzzyPart,
-                        repositoryBookFilter,
-                        bookFilterList
-                    )
+            val isFuzzy = viewModel.searchFuzzyEnabled.value
+            val textSearchFlow: Flow<SmartSearchEngine.SmartSearchResult> = flow {
+                if (query.length >= 2 && queryWithoutSpace.isNotEmpty()) {
+                    try {
+                        val candidateQuery = SmartSearchEngine.buildCandidateQuery(
+                            version = version,
+                            query = query,
+                            bookName = repositoryBookFilter,
+                            bookFilterList = bookFilterList,
+                            isFuzzy = isFuzzy
+                        )
+                        val candidates = viewModel.repository.searchVersesRaw(candidateQuery)
+                        val smartResult = SmartSearchEngine.rankAndRefine(candidates, query, isFuzzy)
+                        emit(smartResult)
+                    } catch (e: Exception) {
+                        emit(SmartSearchEngine.SmartSearchResult(emptyList(), null))
+                    }
                 } else {
-                    viewModel.repository.searchBible(
-                        version,
-                        normalizedQuery,
-                        queryWithoutSpace,
-                        repositoryBookFilter,
-                        bookFilterList
-                    )
+                    emit(SmartSearchEngine.SmartSearchResult(emptyList(), null))
                 }
-            } else {
-                flowOf(emptyList())
-            }
+            }.flowOn(Dispatchers.IO)
 
-            combine(referenceResultsFlow, textSearchFlow) { refResults, textResults ->
-                val ranked =
-                    textResults.filter { it.type?.lowercase() !in listOf("pericope", "percope") }
-                        .sortedWith(compareByDescending<BibleVerse> {
-                            when {
-                                it.text?.contains(query, true) == true -> 5000
-                                it.normalizedText?.contains(normalizedQuery, true) == true -> 4000
-                                it.searchText?.contains(queryWithoutSpace, true) == true -> 3000
-                                else -> 100
-                            }
-                        }.thenBy { it.id })
-                var combined = (refResults + ranked).distinctBy { it.id }
+            combine(referenceResultsFlow, textSearchFlow) { refResults, smartResult ->
+                var combined = (refResults + smartResult.verses).distinctBy { it.id }
                 if (selectedBook != "All Books") {
                     combined = combined.filter {
                         it.book?.trim()?.equals(selectedBook.trim(), ignoreCase = true) == true
                     }
                 }
-                combined
+                Pair(combined, smartResult.suggestedPhrase)
             }
-                .flowOn(Dispatchers.Default) // Perform heavy ranking logic in background
-                .collectLatest { filtered ->
+                .flowOn(Dispatchers.Default)
+                .collectLatest { (filtered, suggestedPhrase) ->
                     _binding?.let { b ->
                         viewModel.searchResults.value = filtered
                         searchAdapter.submitListWithQuery(filtered, query)
                         b.textSearchCount.text = filtered.size.toString()
                         updateEmptyState(filtered.isEmpty())
+
+                        // Display Smart Suggestion if available and query had minor variation/typo
+                        if (!suggestedPhrase.isNullOrBlank() && filtered.isNotEmpty() && query.length >= 3) {
+                            b.cardSearchSuggestion?.visibility = View.VISIBLE
+                            b.textSuggestedPhrase?.text = suggestedPhrase
+                            val applyAction = View.OnClickListener {
+                                b.editSearch.setText(suggestedPhrase)
+                                b.editSearch.setSelection(suggestedPhrase.length)
+                            }
+                            b.cardSearchSuggestion?.setOnClickListener(applyAction)
+                            b.btnApplySuggestion?.setOnClickListener(applyAction)
+                        } else {
+                            b.cardSearchSuggestion?.visibility = View.GONE
+                        }
                     }
                 }
         }

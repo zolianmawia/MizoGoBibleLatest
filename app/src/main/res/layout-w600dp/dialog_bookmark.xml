@@ -21,19 +21,55 @@
             android:orientation="vertical"
             android:padding="24dp">
 
-            <TextView
-                android:id="@+id/text_bookmark_reference"
-                android:layout_width="wrap_content"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textColor="?attr/colorPrimary"
-                android:textSize="20sp"
-                android:textStyle="bold"
-                tools:text="Genesis 1:1" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/text_bookmark_reference"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    tools:text="Genesis 1:1" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_open_all_bookmarks"
+                    style="@style/Widget.Material3.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Bookmarks"
+                    android:textSize="12sp"
+                    app:icon="@drawable/ic_bookmark_24"
+                    app:iconSize="16dp" />
+            </LinearLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_bookmark_title"
+                style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:hint="Bookmark Title (A hming ziak rawh)..."
+                app:startIconDrawable="@drawable/ic_label_24"
+                app:endIconMode="dropdown_menu">
+
+                <com.zoliana.khampat.mizobible.ui.common.DropdownAutoCompleteTextView
+                    android:id="@+id/edit_bookmark_title"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:inputType="textCapSentences" />
+            </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="12dp"
                 android:hint="I bookmark chhan ziak rawh (Optional)..."
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
@@ -65,12 +101,22 @@
                 android:gravity="center">
 
                 <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/colorRed"
+                    android:id="@+id/colorYellow"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
                     android:layout_margin="6dp"
                     app:cardCornerRadius="18dp"
-                    app:cardBackgroundColor="#FF5252"
+                    app:cardBackgroundColor="#FFF59D"
+                    app:strokeWidth="2dp"
+                    app:strokeColor="#000000" />
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/colorGreen"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_margin="6dp"
+                    app:cardCornerRadius="18dp"
+                    app:cardBackgroundColor="#C8E6C9"
                     app:strokeWidth="2dp"
                     app:strokeColor="#00000000" />
 
@@ -80,27 +126,17 @@
                     android:layout_height="36dp"
                     android:layout_margin="6dp"
                     app:cardCornerRadius="18dp"
-                    app:cardBackgroundColor="#448AFF"
+                    app:cardBackgroundColor="#BBDEFB"
                     app:strokeWidth="2dp"
                     app:strokeColor="#00000000" />
 
                 <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/colorGreen"
+                    android:id="@+id/colorRed"
                     android:layout_width="36dp"
                     android:layout_height="36dp"
                     android:layout_margin="6dp"
                     app:cardCornerRadius="18dp"
-                    app:cardBackgroundColor="#4CAF50"
-                    app:strokeWidth="2dp"
-                    app:strokeColor="#00000000" />
-
-                <com.google.android.material.card.MaterialCardView
-                    android:id="@+id/colorYellow"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
-                    android:layout_margin="6dp"
-                    app:cardCornerRadius="18dp"
-                    app:cardBackgroundColor="#FFD740"
+                    app:cardBackgroundColor="#FFCDD2"
                     app:strokeWidth="2dp"
                     app:strokeColor="#00000000" />
 
@@ -110,7 +146,7 @@
                     android:layout_height="36dp"
                     android:layout_margin="6dp"
                     app:cardCornerRadius="18dp"
-                    app:cardBackgroundColor="#9C27B0"
+                    app:cardBackgroundColor="#E1BEE7"
                     app:strokeWidth="2dp"
                     app:strokeColor="#00000000" />
             </LinearLayout>

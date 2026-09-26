@@ -11,7 +11,6 @@
         android:id="@+id/app_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        app:backgroundTint="?attr/colorSurface"
         app:elevation="0dp"
         app:liftOnScroll="false">
 
@@ -19,15 +18,13 @@
             android:id="@+id/collapsing_toolbar"
             android:layout_width="match_parent"
             android:layout_height="60dp"
-            app:backgroundTint="?attr/colorSurface"
-            app:contentScrim="?attr/colorSurface"
             app:layout_scrollFlags="scroll|exitUntilCollapsed"
             app:titleEnabled="false">
 
             <View
+                android:id="@+id/view_chapter_header_background"
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
-                android:background="?attr/colorSurface"
                 app:layout_collapseMode="pin" />
 
         </com.google.android.material.appbar.CollapsingToolbarLayout>
@@ -53,8 +50,7 @@
             android:baselineAligned="false"
             android:clipChildren="false"
             android:clipToPadding="false"
-            android:orientation="horizontal"
-            android:paddingBottom="60dp">
+            android:orientation="horizontal">
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/recyclerview_bible"
@@ -83,6 +79,52 @@
                     android:layout_height="match_parent"
                     android:layout_gravity="center"
                     android:background="?attr/colorSecondaryContainer" />
+
+                <RelativeLayout
+                    android:id="@+id/layout_split_bar_controls"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:clickable="false"
+                    android:focusable="false"
+                    android:gravity="center_vertical"
+                    android:paddingStart="8dp"
+                    android:paddingEnd="8dp">
+
+                    <TextView
+                        android:id="@+id/text_parallel_line_version"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentStart="true"
+                        android:layout_centerVertical="true"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:fontFamily="sans-serif-condensed"
+                        android:gravity="center_vertical"
+                        android:paddingStart="8dp"
+                        android:paddingEnd="4dp"
+                        android:paddingVertical="4dp"
+                        android:textColor="?attr/colorPrimary"
+                        android:textSize="13sp"
+                        android:textStyle="bold"
+                        app:drawableEndCompat="@drawable/ic_arrow_drop_down_24"
+                        app:drawableTint="?attr/colorPrimary"
+                        tools:text="MzOV" />
+
+                    <ImageView
+                        android:id="@+id/btn_parallel_line_close"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:clickable="true"
+                        android:contentDescription="Close parallel view"
+                        android:focusable="true"
+                        android:padding="6dp"
+                        android:src="@drawable/ic_close_24"
+                        app:tint="?attr/colorOnSurfaceVariant" />
+                </RelativeLayout>
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/split_handle"
@@ -138,7 +180,7 @@
         android:layout_marginBottom="4dp"
         android:elevation="10dp"
         android:fontFamily="serif"
-        android:textColor="#61512b"
+        android:textColor="@color/bible_verse_text"
         android:textSize="36sp"
         android:textStyle="bold"
         tools:text="1" />

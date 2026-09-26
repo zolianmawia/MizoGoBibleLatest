@@ -15,10 +15,12 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.zoliana.khampat.mizobible.R
+import com.zoliana.khampat.mizobible.utils.ThemeHelper
 import com.zoliana.khampat.mizobible.data.BibleVerse
 import com.zoliana.khampat.mizobible.data.Bookmark
 import com.zoliana.khampat.mizobible.data.MembershipType
@@ -203,7 +205,8 @@ fun setPins(pins: List<Pin>) {
                 binding.textVerseNumber.visibility = View.GONE
                 binding.textVerseContent.gravity = Gravity.START
                 val hPadding = (sidePadding * density).toInt()
-                binding.layoutVerseMain.setPadding(hPadding, 4, hPadding, 4)
+                val vPadding = (6 * density).toInt()
+                binding.layoutVerseMain.setPadding(hPadding, vPadding, hPadding, vPadding)
             }
 
             if (isPlaceholder) {
@@ -222,19 +225,27 @@ fun setPins(pins: List<Pin>) {
             val typedValue = TypedValue()
             val theme = binding.root.context.theme
             
-            // Base text colors
-            val bibleTextColor = Color.parseColor("#61512b")
-            val textColor = bibleTextColor
+            // Base text colors: Guaranteed contrast with effective verse background
+            val context = binding.root.context
+            val customFontColor = try {
+                if (settings.fontColor.isNotBlank() && settings.fontColor != "default") {
+                    Color.parseColor(settings.fontColor)
+                } else null
+            } catch (e: Exception) { null }
+            val effectiveVerseBg = ThemeHelper.getEffectiveToolbarColor(context)
+            val effectiveTextColor = ThemeHelper.getContrastingTextColor(effectiveVerseBg, customFontColor)
+            val textColor = effectiveTextColor
             
-            val primaryColor = if (theme.resolveAttribute(androidx.appcompat.R.attr.colorPrimary, typedValue, true)) typedValue.data else Color.parseColor("#1976D2")
+            val rawPrimary = if (theme.resolveAttribute(androidx.appcompat.R.attr.colorPrimary, typedValue, true)) typedValue.data else Color.parseColor("#1976D2")
+            val primaryColor = ThemeHelper.getContrastingVerseNumberColor(effectiveVerseBg, rawPrimary)
             val selectionColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)) typedValue.data else Color.parseColor("#FFE0B2")
             val defaultBookmarkColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true)) typedValue.data else Color.parseColor("#FFF9C4")
 
             if (!isHeading && verseNum != "0" && verseNum.isNotEmpty()) {
                 val end = verseNum.length
                 spannable.setSpan(ForegroundColorSpan(primaryColor), 0, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                spannable.setSpan(RelativeSizeSpan(0.65f), 0, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                spannable.setSpan(StyleSpan(Typeface.ITALIC), 0, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                spannable.setSpan(RelativeSizeSpan(0.85f), 0, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                spannable.setSpan(StyleSpan(Typeface.BOLD), 0, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
                 spannable.setSpan(SuperscriptSpan(), 0, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
 
@@ -244,14 +255,12 @@ fun setPins(pins: List<Pin>) {
                 spannable.setSpan(WavyUnderlineSpan(pinColor), contentStart, spannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
             }
 
-            binding.textVerseContent.text = spannable
-
             val isBookmarked = bookmark != null
             val savedBookmarkColor = if (bookmark != null) {
                 if (membershipType == MembershipType.FREE) {
-                    Color.parseColor("#E0E0E0")
+                    ThemeHelper.getSoftBookmarkColor("#E0E0E0", effectiveVerseBg)
                 } else {
-                    try { Color.parseColor(bookmark.color) } catch (e: Exception) { defaultBookmarkColor }
+                    ThemeHelper.getSoftBookmarkColor(bookmark.color, effectiveVerseBg)
                 }
             } else defaultBookmarkColor
 
@@ -261,7 +270,19 @@ fun setPins(pins: List<Pin>) {
                 else -> Color.TRANSPARENT
             }
 
-            val finalTextColor = if (isBookmarked || isSelected) Color.BLACK else textColor
+            val isHighlighted = isSelected || isBookmarked
+            val finalTextColor = if (isHighlighted) {
+                ThemeHelper.getContrastingTextColor(normalBgColor, customFontColor)
+            } else {
+                textColor
+            }
+
+            if (isHighlighted && !isHeading && verseNum != "0" && verseNum.isNotEmpty()) {
+                val highlightedVNumColor = ThemeHelper.getContrastingVerseNumberColor(normalBgColor, rawPrimary)
+                spannable.setSpan(ForegroundColorSpan(highlightedVNumColor), 0, verseNum.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+
+            binding.textVerseContent.text = spannable
             binding.textVerseContent.setTextColor(finalTextColor)
 
             if (shouldHighlight) {
@@ -298,22 +319,36 @@ fun setPins(pins: List<Pin>) {
 
             val tf = try {
                 when (settings.fontFamily) {
-                    "Default" -> Typeface.create(Typeface.DEFAULT, style); "Sans Serif" -> Typeface.create(Typeface.SANS_SERIF, style); "Serif" -> Typeface.create(Typeface.SERIF, style); "Monospace" -> Typeface.create(Typeface.MONOSPACE, style)
+                    "Default" -> Typeface.create(Typeface.DEFAULT, style)
+                    "Sans Serif" -> Typeface.create(Typeface.SANS_SERIF, style)
+                    "Serif", "Times New Roman" -> Typeface.create(Typeface.SERIF, style)
+                    "Monospace" -> Typeface.create(Typeface.MONOSPACE, style)
                     else -> {
                         val extensions = listOf(".ttf", ".otf")
-                        var assetTf: Typeface? = null; for (ext in extensions) {
-                            try { assetTf = Typeface.createFromAsset(binding.root.context.assets, "fonts/${settings.fontFamily}$ext"); break } catch (e: Exception) { }
-                        }; if (assetTf != null) Typeface.create(assetTf, style) else Typeface.create(Typeface.DEFAULT, style)
+                        var assetTf: Typeface? = null
+                        for (ext in extensions) {
+                            try {
+                                assetTf = Typeface.createFromAsset(binding.root.context.assets, "fonts/${settings.fontFamily}$ext")
+                                break
+                            } catch (e: Exception) { }
+                        }
+                        if (assetTf != null) Typeface.create(assetTf, style) else Typeface.create(Typeface.SERIF, style)
                     }
                 }
             } catch (e: Exception) {
-                Typeface.create(Typeface.DEFAULT, style)
+                Typeface.create(Typeface.SERIF, style)
             }
 
             binding.textVerseContent.typeface = tf
             binding.textVerseContent.letterSpacing = settings.letterSpacing
-            binding.textVerseContent.setLineSpacing(0f, settings.lineHeight)
+            val mult = if (settings.lineHeight <= 1.05f) 1.28f else settings.lineHeight
+            binding.textVerseContent.setLineSpacing((2 * density), mult)
             binding.root.setOnClickListener { onClick(verse, binding.root) }
+        }
+
+        private fun isColorDark(color: Int): Boolean {
+            val darkness = 1 - (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255.0
+            return darkness >= 0.5
         }
     }
 

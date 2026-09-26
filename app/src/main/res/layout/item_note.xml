@@ -80,7 +80,7 @@
             android:layout_marginTop="4dp"
             android:ellipsize="end"
             android:maxLines="2"
-            android:textColor="?attr/colorOnSurfaceVariant"
+            android:textColor="@color/bible_verse_text"
             android:textSize="13sp"
             tools:text="Atir hmain Pathianin van leh lei a siam a." />
 

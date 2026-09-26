@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Build
@@ -36,9 +37,12 @@ import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.firebase.auth.FirebaseAuth
 import com.zoliana.khampat.mizobible.MainActivity
 import com.zoliana.khampat.mizobible.R
+import com.zoliana.khampat.mizobible.utils.ThemeHelper
 import com.zoliana.khampat.mizobible.data.BibleDatabase
 import com.zoliana.khampat.mizobible.data.BibleRepository
 import com.zoliana.khampat.mizobible.data.BibleVerse
@@ -47,16 +51,18 @@ import com.zoliana.khampat.mizobible.data.MembershipType
 import com.zoliana.khampat.mizobible.data.Note
 import com.zoliana.khampat.mizobible.data.Pin
 import com.zoliana.khampat.mizobible.data.UserDatabase
+import com.zoliana.khampat.mizobible.ui.common.TitleSuggestionAdapter
+import com.zoliana.khampat.mizobible.databinding.BottomSheetVerseActionsBinding
 import com.zoliana.khampat.mizobible.databinding.DialogBookmarkBinding
 import com.zoliana.khampat.mizobible.databinding.DialogNoteBinding
 import com.zoliana.khampat.mizobible.databinding.FragmentTransformBinding
 import com.zoliana.khampat.mizobible.databinding.LayoutPinPopupBinding
-import com.zoliana.khampat.mizobible.databinding.LayoutVerseActionsPopupBinding
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -75,7 +81,8 @@ class TransformFragment : Fragment() {
     private var bibleAdapter: BibleAdapter? = null
     private var splitBibleAdapter: BibleAdapter? = null
     private val selectedVersesList = mutableListOf<BibleVerse>()
-    private var actionPopup: PopupWindow? = null
+    private var verseActionBottomSheet: BottomSheetDialog? = null
+    private var bottomSheetBinding: BottomSheetVerseActionsBinding? = null
     private var pinSelectionPopup: PopupWindow? = null
 
     private var readingTimerJob: Job? = null
@@ -97,15 +104,9 @@ class TransformFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding?.layoutBibleContainer?.let { container ->
-            ViewCompat.setOnApplyWindowInsetsListener(container) { v, insets ->
-                val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-                v.updatePadding(bottom = systemBars.bottom)
-                insets
-            }
-        }
-
+        updateBiblePaddings()
         showBottomBarAndResetTimer()
+        applyTheme()
 
         bibleAdapter = BibleAdapter { verse, anchor -> handleVerseSelection(verse, anchor, false) }
         binding?.recyclerviewBible?.adapter = bibleAdapter
@@ -206,7 +207,28 @@ class TransformFragment : Fragment() {
                 if (verses.isNullOrEmpty()) View.GONE else View.VISIBLE
 
             bibleAdapter?.submitList(verses) {
-                if (viewModel.isInitialLoad && verses.isNotEmpty()) {
+                val hlId = viewModel.highlightVerseId.value
+                val hlVNum = viewModel.highlightVerseNumber.value
+                if ((hlId != null && hlId != 0) || hlVNum != null) {
+                    fun getVNum(v: String?): Int? =
+                        v?.trim()?.takeWhile { it.isDigit() }?.toIntOrNull()
+
+                    var pos = verses.indexOfFirst { it.id == hlId && hlId != 0 }
+                    if (pos == -1 && hlVNum != null) {
+                        val target = getVNum(hlVNum)
+                        pos = verses.indexOfFirst { getVNum(it.verse) == target }
+                    }
+                    if (pos != -1) {
+                        (binding?.recyclerviewBible?.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(
+                            pos,
+                            0
+                        )
+                        (binding?.recyclerviewBibleSplit?.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(
+                            pos,
+                            0
+                        )
+                    }
+                } else if (viewModel.isInitialLoad && verses.isNotEmpty()) {
                     val lastV = viewModel.lastVerse.value
                     val pos = verses.indexOfFirst { it.verse == lastV }.takeIf { it != -1 } ?: 0
                     (binding?.recyclerviewBible?.layoutManager as? LinearLayoutManager)?.scrollToPositionWithOffset(
@@ -250,6 +272,22 @@ class TransformFragment : Fragment() {
                     splitBibleAdapter?.setSidePadding(padding)
                 }
             }
+        }
+
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.splitVersion.collectLatest { version ->
+                    binding?.textParallelLineVersion?.text = MainActivity.getVersionDisplayName(version)
+                }
+            }
+        }
+
+        binding?.textParallelLineVersion?.setOnClickListener {
+            (activity as? MainActivity)?.showSplitVersionSelectionDialog()
+        }
+
+        binding?.btnParallelLineClose?.setOnClickListener {
+            viewModel.setSplitMode(false)
         }
 
         // Chapter title animation on scroll
@@ -435,8 +473,32 @@ class TransformFragment : Fragment() {
         binding?.recyclerviewBibleSplit?.addOnItemTouchListener(itemTouchListener)
     }
 
+    fun applyTheme() {
+        val ctx = context ?: return
+        val toolbarColor = ThemeHelper.getEffectiveToolbarColor(ctx)
+        val isDark = ThemeHelper.isColorDark(toolbarColor)
+        val fontColor = ThemeHelper.getEffectiveFontColor(ctx)
+        val textColor = ThemeHelper.getContrastingTextColor(toolbarColor, fontColor)
+
+        binding?.let { b ->
+            b.root.setBackgroundColor(toolbarColor)
+            b.appBar.setBackgroundColor(toolbarColor)
+            b.appBar.backgroundTintList = ColorStateList.valueOf(toolbarColor)
+            b.collapsingToolbar.setBackgroundColor(toolbarColor)
+            b.collapsingToolbar.backgroundTintList = ColorStateList.valueOf(toolbarColor)
+            b.collapsingToolbar.setContentScrimColor(toolbarColor)
+            b.viewChapterHeaderBackground.setBackgroundColor(toolbarColor)
+            b.recyclerviewBible.setBackgroundColor(toolbarColor)
+            b.recyclerviewBibleSplit.setBackgroundColor(toolbarColor)
+            b.textChapterTitle.setTextColor(textColor)
+        }
+        bibleAdapter?.notifyDataSetChanged()
+        splitBibleAdapter?.notifyDataSetChanged()
+    }
+
     override fun onResume() {
         super.onResume()
+        applyTheme()
         startReadingTimer()
     }
 
@@ -472,25 +534,27 @@ class TransformFragment : Fragment() {
         binding?.textHandleIcon?.animate()?.rotation(if (isVertical) 0f else 90f)?.setDuration(400)
             ?.start()
 
-        val dividerSize = (14 * resources.displayMetrics.density).toInt()
-        val lineWidth = (16 * resources.displayMetrics.density).toInt()
-        val handleSize = (16 * resources.displayMetrics.density).toInt() //icon
+        val density = resources.displayMetrics.density
+        val dividerHeight = (36 * density).toInt()
+        val dividerWidth = (16 * density).toInt()
+        val handleSize = (24 * density).toInt() //icon
 
         dividerContainer.layoutParams = if (isVertical) {
-            LinearLayout.LayoutParams(dividerSize, ViewGroup.LayoutParams.MATCH_PARENT)
+            LinearLayout.LayoutParams(dividerWidth, ViewGroup.LayoutParams.MATCH_PARENT)
         } else {
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dividerSize)
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dividerHeight)
         }
         dividerLine.layoutParams = if (isVertical) {
-            FrameLayout.LayoutParams(lineWidth, ViewGroup.LayoutParams.MATCH_PARENT)
+            FrameLayout.LayoutParams(dividerWidth, ViewGroup.LayoutParams.MATCH_PARENT)
                 .apply { gravity = Gravity.CENTER_HORIZONTAL }
         } else {
-            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, lineWidth)
-                .apply { gravity = Gravity.CENTER_VERTICAL }
+            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+                .apply { gravity = Gravity.CENTER }
         }
         splitHandle.layoutParams = FrameLayout.LayoutParams(handleSize, handleSize).apply {
             gravity = Gravity.CENTER
         }
+        binding?.layoutSplitBarControls?.visibility = if (isVertical) View.GONE else View.VISIBLE
         updateBiblePaddings()
         setBibleWeights(1f, 1f, isVertical)
     }
@@ -500,25 +564,39 @@ class TransformFragment : Fragment() {
         val isSplit = viewModel.isSplitMode.value
         val density = resources.displayMetrics.density
 
-        // Apply a constant padding. With the WindowInsets padding we added, we don't need large padding here.
-        val bottomNavPadding = (16 * density).toInt()
-
         val rv1 = binding?.recyclerviewBible ?: return
         val rv2 = binding?.recyclerviewBibleSplit ?: return
 
-        rv1.clipToPadding = true
-        rv2.clipToPadding = true
+        // clipToPadding must be false so that when reading or scrolling,
+        // the verses flow continuously all the way to the bottom edge of the screen,
+        // without leaving any empty blank strip/background gap.
+        rv1.clipToPadding = false
+        rv2.clipToPadding = false
 
         val left = rv1.paddingLeft
         val right = rv1.paddingRight
         val top = rv1.paddingTop
 
-        val rv1Bottom = if (isSplit && !isVertical) (12 * density).toInt() else bottomNavPadding
+        val mainActivity = activity as? MainActivity
+        val prefs = mainActivity?.getSharedPreferences("bible_prefs", Context.MODE_PRIVATE)
+        val layoutStyle = prefs?.getString("app_layout_style", "Classic") ?: "Classic"
+
+        // In Modern mode, floating bar is ~54dp + 12dp margin.
+        // In Classic mode, BottomNav is 56dp + card.
+        // With clipToPadding = false, this padding ONLY takes effect when reaching the very end
+        // of the chapter, allowing the last verse to scroll up above the bottom controls.
+        val bottomNavPadding = if (layoutStyle == "Modern") {
+            (76 * density).toInt()
+        } else {
+            (100 * density).toInt()
+        }
+
+        val rv1Bottom = if (isSplit && !isVertical) (8 * density).toInt() else bottomNavPadding
         rv1.setPadding(left, top, right, rv1Bottom)
 
         val left2 = rv2.paddingLeft
         val right2 = rv2.paddingRight
-        val rv2Top = if (isSplit && !isVertical) (16 * density).toInt() else 0
+        val rv2Top = if (isSplit && !isVertical) (8 * density).toInt() else 0
 
         rv2.setPadding(left2, rv2Top, right2, bottomNavPadding)
     }
@@ -527,9 +605,9 @@ class TransformFragment : Fragment() {
         var startX = 0f
         var startY = 0f
         var isDragging = false
-        binding?.splitDividerContainer?.setOnTouchListener { _, event ->
+        val touchListener = View.OnTouchListener { _, event ->
             when (event.action) {
-                ACTION_DOWN -> {
+                MotionEvent.ACTION_DOWN -> {
                     startX = event.rawX
                     startY = event.rawY
                     isDragging = false
@@ -541,7 +619,7 @@ class TransformFragment : Fragment() {
                     if (dx > 10 || dy > 10) isDragging = true
                     if (isDragging) {
                         val container =
-                            binding?.layoutBibleContainer ?: return@setOnTouchListener false
+                            binding?.layoutBibleContainer ?: return@OnTouchListener false
                         val loc = IntArray(2)
                         container.getLocationOnScreen(loc)
                         if (viewModel.isVerticalSplit.value) {
@@ -570,6 +648,9 @@ class TransformFragment : Fragment() {
             }
             true
         }
+
+        binding?.splitHandle?.setOnTouchListener(touchListener)
+        binding?.splitDividerLine?.setOnTouchListener(touchListener)
     }
 
     private fun setBibleWeights(w1: Float, w2: Float, isVertical: Boolean) {
@@ -692,54 +773,244 @@ class TransformFragment : Fragment() {
             bibleAdapter?.setSelection(verse.id ?: 0, true)
             splitBibleAdapter?.setSelection(verse.id ?: 0, true)
         }
-        if (selectedVersesList.isEmpty()) actionPopup?.dismiss() else showVerseActionPopup()
+        if (selectedVersesList.isEmpty()) {
+            clearSelection()
+            verseActionBottomSheet?.dismiss()
+        } else {
+            showVerseActionBottomSheet()
+        }
     }
 
-    private fun showVerseActionPopup() {
-        if (actionPopup?.isShowing == true) actionPopup?.dismiss()
-        val popupBinding = LayoutVerseActionsPopupBinding.inflate(layoutInflater)
-        actionPopup = PopupWindow(
-            popupBinding.root,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            false
-        )
+    private fun showVerseActionBottomSheet() {
+        if (selectedVersesList.isEmpty()) {
+            clearSelection()
+            verseActionBottomSheet?.dismiss()
+            return
+        }
 
-        popupBinding.actionCopy.setOnClickListener {
+        if (verseActionBottomSheet?.isShowing == true && bottomSheetBinding != null) {
+            updateBottomSheetContent()
+            return
+        }
+
+        verseActionBottomSheet?.dismiss()
+        val sheetBinding = BottomSheetVerseActionsBinding.inflate(layoutInflater)
+        bottomSheetBinding = sheetBinding
+
+        val dialog = BottomSheetDialog(requireContext(), R.style.Theme_MizoGoBible_BottomSheet)
+        dialog.setContentView(sheetBinding.root)
+
+        dialog.setOnShowListener {
+            val bottomSheet =
+                dialog.findViewById<View>(com.google.android.material.R.id.design_bottom_sheet) as? FrameLayout
+            bottomSheet?.let {
+                val behavior = BottomSheetBehavior.from(it)
+                behavior.state = BottomSheetBehavior.STATE_EXPANDED
+                behavior.skipCollapsed = true
+                it.setBackgroundResource(android.R.color.transparent)
+            }
+        }
+
+        // Stepper buttons
+        sheetBinding.btnSheetPlus.setOnClickListener {
+            addNextVerseToSelection()
+        }
+        sheetBinding.btnSheetMinus.setOnClickListener {
+            removeVerseFromSelection()
+        }
+
+        // Pin colors
+        sheetBinding.pinRed.setOnClickListener { applyPinColor("#FF5252") }
+        sheetBinding.pinBlue.setOnClickListener { applyPinColor("#448AFF") }
+        sheetBinding.pinGreen.setOnClickListener { applyPinColor("#4CAF50") }
+        sheetBinding.pinYellow.setOnClickListener { applyPinColor("#FFD740") }
+        sheetBinding.pinPurple.setOnClickListener { applyPinColor("#E040FB") }
+
+        // Open Pin Activity / Fragment (A sen / Red arrow)
+        sheetBinding.btnOpenPins.setOnClickListener {
+            dialog.dismiss()
+            findNavController().navigate(R.id.nav_pin)
+        }
+        sheetBinding.btnOpenPins.setOnLongClickListener {
+            removePinFromSelected()
+            true
+        }
+
+        // Copy button
+        sheetBinding.btnBottomCopy.setOnClickListener {
             copySelectedVerses()
-            clearSelection()
-            actionPopup?.dismiss()
-        }
-        popupBinding.actionShare.setOnClickListener {
-            shareSelectedVerses()
-            clearSelection()
-            actionPopup?.dismiss()
-        }
-        popupBinding.actionBookmark.setOnClickListener {
-            bookmarkSelectedVerses()
-            clearSelection()
-            actionPopup?.dismiss()
-        }
-        popupBinding.actionNote.setOnClickListener {
-            showNoteDialog(selectedVersesList.toList())
-            clearSelection()
-            actionPopup?.dismiss()
-        }
-        popupBinding.actionClear.setOnClickListener {
-            clearSelection()
-            actionPopup?.dismiss()
+            dialog.dismiss()
         }
 
-        actionPopup?.elevation = 30f
-        binding?.root?.let {
-            actionPopup?.showAtLocation(it, Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL, 0, 300)
+        // Bookmark button (A hring / Green arrow)
+        sheetBinding.btnBottomBookmark.setOnClickListener {
+            val list = selectedVersesList.toList()
+            dialog.dismiss()
+            showBookmarkDialog(list)
         }
+        sheetBinding.btnBottomBookmark.setOnLongClickListener {
+            dialog.dismiss()
+            findNavController().navigate(R.id.nav_bookmark)
+            true
+        }
+
+        // Share button
+        sheetBinding.btnBottomShare.setOnClickListener {
+            shareSelectedVerses()
+            dialog.dismiss()
+        }
+
+        dialog.setOnDismissListener {
+            bottomSheetBinding = null
+            verseActionBottomSheet = null
+            clearSelection()
+        }
+
+        verseActionBottomSheet = dialog
+        updateBottomSheetContent()
+        dialog.show()
+    }
+
+    private fun applyPinColor(colorHex: String) = ensureLogin {
+        if (selectedVersesList.isEmpty()) return@ensureLogin
+        val list = selectedVersesList.toList()
+        list.forEach { verse ->
+            viewModel.addPin(
+                Pin(
+                    verseId = verse.id ?: 0,
+                    book = verse.book ?: "",
+                    chapter = verse.chapter ?: 0,
+                    verse = verse.verse ?: "0",
+                    text = verse.text ?: "",
+                    color = colorHex,
+                    version = viewModel.currentVersion.value
+                )
+            )
+        }
+        Toast.makeText(requireContext(), "Pin a ni e", Toast.LENGTH_SHORT).show()
+        verseActionBottomSheet?.dismiss()
+    }
+
+    private fun removePinFromSelected() = ensureLogin {
+        if (selectedVersesList.isEmpty()) return@ensureLogin
+        val allPins = viewModel.allPins.value ?: emptyList()
+        val allBm = viewModel.allBookmarks.value ?: emptyList()
+        var removedCount = 0
+        selectedVersesList.forEach { v ->
+            val pinMatch = allPins.find { it.verseId == v.id }
+            if (pinMatch != null) {
+                viewModel.deletePin(pinMatch)
+                removedCount++
+            }
+            val bmMatch = allBm.find { it.verseId == v.id }
+            if (bmMatch != null) {
+                viewModel.deleteBookmark(bmMatch)
+                removedCount++
+            }
+        }
+        if (removedCount > 0) {
+            Toast.makeText(requireContext(), "Pin paih a ni e", Toast.LENGTH_SHORT).show()
+        } else {
+            Toast.makeText(requireContext(), "Pin a awm lo", Toast.LENGTH_SHORT).show()
+        }
+        verseActionBottomSheet?.dismiss()
+    }
+
+    private fun addNextVerseToSelection() {
+        val currentList = bibleAdapter?.currentList ?: return
+        if (currentList.isEmpty() || selectedVersesList.isEmpty()) return
+
+        val lastSelected = selectedVersesList.maxByOrNull { verse ->
+            currentList.indexOfFirst { it.id == verse.id }
+        } ?: selectedVersesList.last()
+
+        val currentIndex = currentList.indexOfFirst { it.id == lastSelected.id }
+        if (currentIndex == -1) return
+
+        var nextIndex = currentIndex + 1
+        while (nextIndex < currentList.size && currentList[nextIndex].verse == "0") {
+            nextIndex++
+        }
+
+        if (nextIndex < currentList.size) {
+            val nextVerse = currentList[nextIndex]
+            if (!selectedVersesList.any { it.id == nextVerse.id }) {
+                selectedVersesList.add(nextVerse)
+                bibleAdapter?.setSelection(nextVerse.id ?: 0, true)
+                splitBibleAdapter?.setSelection(nextVerse.id ?: 0, true)
+                updateBottomSheetContent()
+                binding?.recyclerviewBible?.smoothScrollToPosition(nextIndex)
+            }
+        } else {
+            Toast.makeText(context, "Bung tawp a ni e", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun removeVerseFromSelection() {
+        val currentList = bibleAdapter?.currentList ?: return
+        if (selectedVersesList.isEmpty()) return
+
+        if (selectedVersesList.size <= 1) {
+            verseActionBottomSheet?.dismiss()
+            clearSelection()
+            return
+        }
+
+        val lastSelected = selectedVersesList.maxByOrNull { verse ->
+            currentList.indexOfFirst { it.id == verse.id }
+        } ?: selectedVersesList.last()
+
+        selectedVersesList.remove(lastSelected)
+        bibleAdapter?.setSelection(lastSelected.id ?: 0, false)
+        splitBibleAdapter?.setSelection(lastSelected.id ?: 0, false)
+        updateBottomSheetContent()
+    }
+
+    private fun updateBottomSheetContent() {
+        if (selectedVersesList.isEmpty()) {
+            verseActionBottomSheet?.dismiss()
+            clearSelection()
+            return
+        }
+        selectedVersesList.sortBy { it.id }
+
+        // Update Reference (e.g. "Johana 3:4" or "Johana 3:4-5")
+        val real = selectedVersesList.filter { it.verse != "0" }
+        val m = real.firstOrNull() ?: selectedVersesList.first()
+        val refString = when {
+            real.isEmpty() -> "${m.book} ${m.chapter}"
+            real.size == 1 -> "${m.book} ${m.chapter}:${real.first().verse}"
+            else -> {
+                val firstNum = real.first().verse?.toIntOrNull()
+                val lastNum = real.last().verse?.toIntOrNull()
+                if (firstNum != null && lastNum != null && real.size == (lastNum - firstNum + 1)) {
+                    "${m.book} ${m.chapter}:${real.first().verse}-${real.last().verse}"
+                } else {
+                    "${m.book} ${m.chapter} (${real.size} chang)"
+                }
+            }
+        }
+        bottomSheetBinding?.textSheetReference?.text = refString
+
+        // Update Verse Text Preview Card
+        val textContent = StringBuilder()
+        selectedVersesList.forEachIndexed { index, verse ->
+            val vNum = verse.verse ?: "0"
+            val text = verse.text?.trim() ?: ""
+            if (selectedVersesList.size > 1 && vNum != "0") {
+                textContent.append("$vNum ")
+            }
+            textContent.append(text)
+            if (index < selectedVersesList.size - 1) textContent.append(" ")
+        }
+        bottomSheetBinding?.textSheetContent?.text = textContent.toString()
     }
 
     private fun clearSelection() {
         bibleAdapter?.clearSelection()
         splitBibleAdapter?.clearSelection()
         selectedVersesList.clear()
+        bottomSheetBinding = null
     }
 
     private fun copySelectedVerses() {
@@ -866,17 +1137,64 @@ class TransformFragment : Fragment() {
     private fun showBookmarkDialog(verses: List<BibleVerse>) = ensureLogin {
         val bookmarkBinding = DialogBookmarkBinding.inflate(layoutInflater)
         val dialog = AlertDialog.Builder(requireContext()).setView(bookmarkBinding.root).create()
-        if (verses.size == 1) bookmarkBinding.textBookmarkReference.text =
-            "${verses[0].book} ${verses[0].chapter}:${verses[0].verse}" else bookmarkBinding.textBookmarkReference.text =
-            "${verses.size} Verses Selected"
-        var selectedColor = "#ffe7ad"
+        
+        var selectedColor = ThemeHelper.BOOKMARK_YELLOW
         val colorViews = listOf(
-            bookmarkBinding.colorRed to "#ff9999",
-            bookmarkBinding.colorBlue to "#88b4fc",
-            bookmarkBinding.colorGreen to "#b3ffb6",
-            bookmarkBinding.colorYellow to "#ffeeb0",
-            bookmarkBinding.colorPurple to "#f0a4fc"
+            bookmarkBinding.colorYellow to ThemeHelper.BOOKMARK_YELLOW,
+            bookmarkBinding.colorGreen to ThemeHelper.BOOKMARK_GREEN,
+            bookmarkBinding.colorBlue to ThemeHelper.BOOKMARK_BLUE,
+            bookmarkBinding.colorRed to ThemeHelper.BOOKMARK_RED,
+            bookmarkBinding.colorPurple to ThemeHelper.BOOKMARK_PURPLE
         )
+
+        fun updateSelectedSwatch(colorHex: String) {
+            selectedColor = colorHex
+            colorViews.forEach { pair ->
+                val matches = pair.second.equals(colorHex, ignoreCase = true) ||
+                    (colorHex.equals("#FF5252", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_RED) ||
+                    (colorHex.equals("#EF9A9A", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_RED) ||
+                    (colorHex.equals("#448AFF", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_BLUE) ||
+                    (colorHex.equals("#90CAF9", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_BLUE) ||
+                    (colorHex.equals("#4CAF50", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_GREEN) ||
+                    (colorHex.equals("#A5D6A7", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_GREEN) ||
+                    (colorHex.equals("#FFD740", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_YELLOW) ||
+                    (colorHex.equals("#FFE082", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_YELLOW) ||
+                    (colorHex.equals("#9C27B0", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_PURPLE) ||
+                    (colorHex.equals("#CE93D8", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_PURPLE)
+                pair.first.strokeColor = if (matches) Color.BLACK else Color.TRANSPARENT
+            }
+        }
+        updateSelectedSwatch(selectedColor)
+
+        // Load previous bookmark titles for Dropdown Suggestions
+        lifecycleScope.launch {
+            val allBookmarks = viewModel.repository.userDao.getAllBookmarksSync()
+            val titles = allBookmarks.mapNotNull { it.title.trim().takeIf { t -> t.isNotEmpty() } }.distinct()
+            if (titles.isNotEmpty()) {
+                val titleAdapter = TitleSuggestionAdapter(requireContext(), titles)
+                bookmarkBinding.editBookmarkTitle.setAdapter(titleAdapter)
+            }
+        }
+        bookmarkBinding.layoutBookmarkTitle.setEndIconOnClickListener {
+            bookmarkBinding.editBookmarkTitle.showAllSuggestions()
+        }
+
+        if (verses.size == 1) {
+            val v = verses[0]
+            bookmarkBinding.textBookmarkReference.text = "${v.book} ${v.chapter}:${v.verse}"
+            lifecycleScope.launch {
+                val existing = viewModel.repository.getBookmark(v.id ?: 0, viewModel.currentVersion.value).firstOrNull()
+                if (existing != null) {
+                    bookmarkBinding.editBookmarkTitle.setText(existing.title)
+                    bookmarkBinding.editBookmarkNote.setText(existing.note)
+                    if (existing.color.isNotEmpty()) {
+                        updateSelectedSwatch(existing.color)
+                    }
+                }
+            }
+        } else {
+            bookmarkBinding.textBookmarkReference.text = "${verses.size} Verses Selected"
+        }
         colorViews.forEach { (view, color) ->
             view.setOnClickListener {
                 lifecycleScope.launch {
@@ -888,16 +1206,20 @@ class TransformFragment : Fragment() {
                             Toast.LENGTH_SHORT
                         ).show()
                     } else {
-                        selectedColor = color
-                        colorViews.forEach { it.first.strokeColor = Color.TRANSPARENT }
-                        view.strokeColor = Color.BLACK
+                        updateSelectedSwatch(color)
                     }
                 }
             }
         }
+        bookmarkBinding.btnOpenAllBookmarks.setOnClickListener {
+            dialog.dismiss()
+            findNavController().navigate(R.id.nav_bookmark)
+        }
         bookmarkBinding.btnCancel.setOnClickListener { dialog.dismiss() }
         bookmarkBinding.btnSave.setOnClickListener {
-            val note = bookmarkBinding.editBookmarkNote.text.toString()
+            val title = bookmarkBinding.editBookmarkTitle.text.toString().trim()
+            val note = bookmarkBinding.editBookmarkNote.text.toString().trim()
+            val now = System.currentTimeMillis()
             verses.forEach {
                 viewModel.toggleBookmark(
                     Bookmark(
@@ -907,8 +1229,10 @@ class TransformFragment : Fragment() {
                         verse = it.verse ?: "0",
                         text = it.text ?: "",
                         version = viewModel.currentVersion.value,
+                        title = title,
                         note = note,
-                        color = selectedColor
+                        color = selectedColor,
+                        timestamp = now
                     )
                 )
             }
@@ -922,6 +1246,7 @@ class TransformFragment : Fragment() {
 
     fun showPinSelectionPopup(anchorView: View) = ensureLogin {
         val popupBinding = LayoutPinPopupBinding.inflate(layoutInflater)
+        ThemeHelper.applyThemeToView(requireContext(), popupBinding.root)
         val window = PopupWindow(
             popupBinding.root,
             ViewGroup.LayoutParams.WRAP_CONTENT,
@@ -979,7 +1304,7 @@ class TransformFragment : Fragment() {
                 selectedVersesList.clear()
                 bibleAdapter?.clearSelection()
                 splitBibleAdapter?.clearSelection()
-                actionPopup?.dismiss()
+                verseActionBottomSheet?.dismiss()
                 Toast.makeText(requireContext(), "Pinned!", Toast.LENGTH_SHORT).show()
                 window.dismiss()
             } else {
@@ -1091,7 +1416,9 @@ class TransformFragment : Fragment() {
 
     override fun onDestroyView() {
         super.onDestroyView()
-        actionPopup?.dismiss()
+        verseActionBottomSheet?.dismiss()
+        verseActionBottomSheet = null
+        bottomSheetBinding = null
         pinSelectionPopup?.dismiss()
         _binding = null
     }

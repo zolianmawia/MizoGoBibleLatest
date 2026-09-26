@@ -4,24 +4,22 @@ import android.app.Application
 import android.util.Log
 import com.onesignal.OneSignal
 import com.onesignal.debug.LogLevel
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class MizoGoBibleApp : Application() {
     override fun onCreate() {
         super.onCreate()
 
         try {
-            // Verbose Logging helps with debug issues!
-            OneSignal.Debug.logLevel = LogLevel.VERBOSE
+            // Avoid verbose logging that triggers and floods FCM logs
+            OneSignal.Debug.logLevel = LogLevel.WARN
 
             // OneSignal Initialization
-            OneSignal.initWithContext(this, "74866640-70e9-481a-8b42-f62c9d8c05aa")
-
-            // requestPermission hi suspend function a nih tak avangin Coroutine chhungah kan dah a ngai e
-            CoroutineScope(Dispatchers.IO).launch {
-                OneSignal.Notifications.requestPermission(true)
+            val onesignalAppId = BuildConfig.ONESIGNAL_APP_ID
+            if (!onesignalAppId.isNullOrEmpty()) {
+                OneSignal.initWithContext(this, onesignalAppId)
+                try {
+                    OneSignal.InAppMessages.paused = true
+                } catch (_: Exception) {}
             }
         } catch (e: Exception) {
             Log.e("MGB_DEBUG", "OneSignal initialization failed: ${e.message}")
