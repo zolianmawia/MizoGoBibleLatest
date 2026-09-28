@@ -155,36 +155,6 @@
                         android:text="Chapter Selector Style"
                         app:icon="@drawable/ic_grid_view" />
 
-                    <FrameLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btn_navigation_layout_style"
-                            style="@style/Widget.Material3.Button.TextButton"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:gravity="start|center_vertical"
-                            android:text="Navigation Layout Style"
-                            app:icon="@drawable/home" />
-
-                        <TextView
-                            android:id="@+id/badge_new_layout"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_gravity="end|center_vertical"
-                            android:layout_marginEnd="12dp"
-                            android:background="@drawable/bg_new_badge"
-                            android:paddingHorizontal="8dp"
-                            android:paddingVertical="2dp"
-                            android:text="NEW"
-                            android:textColor="@color/white"
-                            android:textSize="10sp"
-                            android:textStyle="bold"
-                            android:visibility="gone"
-                            tools:visibility="visible" />
-                    </FrameLayout>
-
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btn_theme_settings"
                         style="@style/Widget.Material3.Button.TextButton"
@@ -194,18 +164,6 @@
                         android:text="Theme"
                         app:icon="@drawable/theme" />
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switch_eye_protection"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Mit Kham Venna" />
-
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switch_keep_screen_on"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Keep Screen On while reading" />
-
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
@@ -213,7 +171,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="8dp"
-                android:text="Bible chang Copy &amp; Share Settings"
+                android:text="Copy Verse Settings"
                 android:textColor="?attr/colorPrimary"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -232,19 +190,136 @@
                     android:orientation="vertical"
                     android:padding="12dp">
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switch_copy_include_reference"
+                    <!-- 1. Include Reference -->
+                    <LinearLayout
+                        android:id="@+id/layout_copy_include_ref"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:checked="true"
-                        android:text="Bible reference telh i duh chuan On rawh." />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingVertical="6dp">
 
-                    <com.google.android.material.materialswitch.MaterialSwitch
-                        android:id="@+id/switch_copy_reference_top_bottom"
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Include Reference"
+                                android:textColor="?attr/colorOnSurface"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:alpha="0.7"
+                                android:text="Bible reference telh i duh chuan On rawh."
+                                android:textColor="?attr/colorOnSurface"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switch_copy_include_reference"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="true" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="6dp"
+                        android:alpha="0.08"
+                        android:background="?attr/colorOnSurface" />
+
+                    <!-- 2. Reference at Bottom -->
+                    <LinearLayout
+                        android:id="@+id/layout_copy_ref_bottom"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:checked="false"
-                        android:text="Reference a hnuai a dah i duh chuan On rawh." />
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingVertical="6dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Reference at Bottom"
+                                android:textColor="?attr/colorOnSurface"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:alpha="0.7"
+                                android:text="Reference a hnuai a dah i duh chuan On rawh."
+                                android:textColor="?attr/colorOnSurface"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switch_copy_reference_top_bottom"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="false" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="6dp"
+                        android:alpha="0.08"
+                        android:background="?attr/colorOnSurface" />
+
+                    <!-- 3. Hide Verse Numbers -->
+                    <LinearLayout
+                        android:id="@+id/layout_copy_hide_verse_numbers"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingVertical="6dp">
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Hide Verse Numbers"
+                                android:textColor="?attr/colorOnSurface"
+                                android:textSize="14sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:alpha="0.7"
+                                android:text="Bible chang copy-in a kara chang number telh loh nan."
+                                android:textColor="?attr/colorOnSurface"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+
+                        <com.google.android.material.materialswitch.MaterialSwitch
+                            android:id="@+id/switch_copy_hide_verse_numbers"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:checked="false" />
+                    </LinearLayout>
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>

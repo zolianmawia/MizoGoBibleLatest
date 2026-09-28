@@ -26,10 +26,11 @@
         android:text="Atir hmain Pathianin van leh lei a siam a." />
 
     <View
+        android:id="@+id/divider_line"
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:layout_marginTop="12dp"
-        android:alpha="0.1"
+        android:alpha="0.15"
         android:background="?attr/colorOnSurface" />
 
 </LinearLayout>

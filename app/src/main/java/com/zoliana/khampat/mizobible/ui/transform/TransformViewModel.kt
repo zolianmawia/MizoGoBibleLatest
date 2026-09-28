@@ -21,6 +21,7 @@ import com.zoliana.khampat.mizobible.data.MembershipType
 import com.zoliana.khampat.mizobible.data.Note
 import com.zoliana.khampat.mizobible.data.Pin
 import com.zoliana.khampat.mizobible.data.ReadingLog
+import com.zoliana.khampat.mizobible.utils.ThemeHelper
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -86,6 +87,7 @@ class TransformViewModel(
     // Copy Settings
     val copyIncludeReference = MutableStateFlow(prefs.getBoolean("copy_include_ref", true))
     val copyReferenceAtBottom = MutableStateFlow(prefs.getBoolean("copy_ref_bottom", false))
+    val copyHideVerseNumbers = MutableStateFlow(prefs.getBoolean("copy_hide_verse_numbers", false))
 
     val availableVersions: LiveData<List<String>> = repository.getAllVersions().asLiveData()
     val allReadingLogs: LiveData<List<ReadingLog>> = repository.getAllReadingLogs().asLiveData()
@@ -519,6 +521,7 @@ class TransformViewModel(
     }
 
     private fun saveFontSettings(settings: FontSettings) {
+        ThemeHelper.setFontColor(getApplication(), settings.fontColor)
         prefs.edit().apply {
             putFloat("font_size", settings.fontSize)
             putString("font_family", settings.fontFamily)
@@ -537,6 +540,7 @@ class TransformViewModel(
         val safeFamily = if (savedFamily == "Times New Roman") "Serif" else savedFamily
         val savedLineHeight = prefs.getFloat("line_height", 1.3f)
         val safeLineHeight = if (savedLineHeight <= 1.05f) 1.3f else savedLineHeight
+        val effectiveColor = ThemeHelper.getFontColor(getApplication())
 
         return FontSettings(
             fontSize = prefs.getFloat("font_size", 18f),
@@ -545,8 +549,12 @@ class TransformViewModel(
             isItalic = prefs.getBoolean("is_italic", false),
             letterSpacing = prefs.getFloat("letter_spacing", 0f),
             lineHeight = safeLineHeight,
-            fontColor = prefs.getString("font_color", "") ?: ""
+            fontColor = effectiveColor
         )
+    }
+
+    fun refreshFontSettings() {
+        fontSettings.value = loadFontSettings()
     }
 
     fun updateSidePadding(padding: Float) {
@@ -570,6 +578,11 @@ class TransformViewModel(
     fun setCopyReferenceAtBottom(atBottom: Boolean) {
         copyReferenceAtBottom.value = atBottom
         prefs.edit().putBoolean("copy_ref_bottom", atBottom).apply()
+    }
+
+    fun setCopyHideVerseNumbers(hide: Boolean) {
+        copyHideVerseNumbers.value = hide
+        prefs.edit().putBoolean("copy_hide_verse_numbers", hide).apply()
     }
 
     fun resetAllData(context: Context) {
@@ -785,11 +798,88 @@ class TransformViewModel(
     }
 
     private fun getTranslatedBookName(book: String, version: String): String {
-        val isEnglishVersion = listOf("kjv", "niv", "asv", "greek (grk)").contains(version.lowercase().trim())
-        return if (isEnglishVersion) bookMapping[book] ?: book else book
+        val v = version.lowercase().trim()
+        val isEnglishVersion = listOf("kjv", "niv", "asv", "greek (grk)").contains(v)
+        if (isEnglishVersion) return bookMapping[book] ?: book
+        if (v == "banglaov" || v == "bangla") {
+            return when (book.trim()) {
+                "Josua-I" -> "Josua"
+                "Ṭah hla" -> "Ṭahhla"
+                else -> book
+            }
+        }
+        return book
     }
 
-    private val bookMapping = mapOf("Genesis" to "Genesis")
+    private val bookMapping = mapOf(
+        "Genesis" to "Genesis",
+        "Exodus" to "Exodus",
+        "Leviticus" to "Leviticus",
+        "Numbers" to "Numbers",
+        "Deuteronomy" to "Deuteronomy",
+        "Josua-I" to "Joshua",
+        "Joshua" to "Joshua",
+        "Roreltute" to "Judges",
+        "Ruthi" to "Ruth",
+        "I - Samuela" to "1 Samuel",
+        "II - Samuela" to "2 Samuel",
+        "I - Lalte" to "1 Kings",
+        "II - Lalte" to "2 Kings",
+        "I - Chronicles" to "1 Chronicles",
+        "II - Chronicles" to "2 Chronicles",
+        "EZRA" to "Ezra",
+        "Nehemia" to "Nehemiah",
+        "Estheri" to "Esther",
+        "Joba" to "Job",
+        "Sam" to "Psalms",
+        "Thufingte" to "Proverbs",
+        "Thuhriltu" to "Ecclesiastes",
+        "Hla Thlan Khawmte" to "Song of Solomon",
+        "Isaia" to "Isaiah",
+        "Jeremia" to "Jeremiah",
+        "Ṭah hla" to "Lamentations",
+        "Ezekiela" to "Ezekiel",
+        "Daniela" to "Daniel",
+        "Hosea" to "Hosea",
+        "Joela" to "Joel",
+        "Amosa" to "Amos",
+        "Obadia" to "Obadiah",
+        "Jona" to "Jonah",
+        "Mika" to "Micah",
+        "Nahuma" to "Nahum",
+        "Habakuka" to "Habakkuk",
+        "Zephania" to "Zephaniah",
+        "Hagaia" to "Haggai",
+        "Zakaria" to "Zechariah",
+        "Malakia" to "Malachi",
+        "Matthaia" to "Matthew",
+        "Marka" to "Mark",
+        "Luka" to "Luke",
+        "Johana" to "John",
+        "Tirhkohte" to "Acts",
+        "Rom" to "Romans",
+        "1 Korinth" to "1 Corinthians",
+        "2 Korinth" to "2 Corinthians",
+        "Galatia" to "Galatians",
+        "Ephesi" to "Ephesians",
+        "Philippi" to "Philippians",
+        "Kolossa" to "Colossians",
+        "1 Thessalonika" to "1 Thessalonians",
+        "2 Thessalonika" to "2 Thessalonians",
+        "1 Timothea" to "1 Timothy",
+        "2 Timothea" to "2 Timothy",
+        "Tita" to "Titus",
+        "Philemona" to "Philemon",
+        "Hebrai" to "Hebrews",
+        "Jakoba" to "James",
+        "1 Petera" to "1 Peter",
+        "2 Petera" to "2 Peter",
+        "1 Johana" to "1 John",
+        "2 Johana" to "2 John",
+        "3 Johana" to "3 John",
+        "Juda" to "Jude",
+        "Thupuan" to "Revelation"
+    )
 
     override fun onCleared() {
         premiumListener?.remove()

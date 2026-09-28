@@ -8,6 +8,7 @@ import android.text.style.ForegroundColorSpan
 import android.text.style.StyleSpan
 import android.view.LayoutInflater
 import android.view.ViewGroup
+import androidx.core.graphics.ColorUtils
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -37,12 +38,16 @@ class SearchAdapter(private val onVerseClick: (BibleVerse) -> Unit) :
 
     class SearchViewHolder(private val binding: ItemSearchBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(verse: BibleVerse, query: String, onClick: (BibleVerse) -> Unit) {
+            val context = binding.root.context
+            val toolbarColor = ThemeHelper.getEffectiveToolbarColor(context)
+            val fontColor = ThemeHelper.getEffectiveFontColor(context)
+            val textColor = ThemeHelper.getContrastingTextColor(toolbarColor, fontColor)
+            val primaryColor = ThemeHelper.getPrimaryColor(context)
+
             binding.textReference.text = "${verse.book} ${verse.chapter}:${verse.verse}"
-            
-            val effectiveFont = ThemeHelper.getEffectiveFontColor(binding.root.context)
-            if (effectiveFont != null) {
-                binding.textContent.setTextColor(effectiveFont)
-            }
+            binding.textReference.setTextColor(primaryColor)
+            binding.textContent.setTextColor(textColor)
+            binding.dividerLine?.setBackgroundColor(ColorUtils.setAlphaComponent(textColor, 30))
 
             val content = verse.text ?: ""
             if (query.isNotEmpty() && query.length >= 2) {

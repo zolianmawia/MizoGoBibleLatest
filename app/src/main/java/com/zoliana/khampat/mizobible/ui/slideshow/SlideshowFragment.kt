@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.view.ActionMode
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -143,12 +144,18 @@ class SlideshowFragment : Fragment() {
                         2 -> showBookmarkActionPopup(item)
                         3 -> {
                             val clipboard = requireContext().getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                            val clipText = "${item.displayReference}\n" + item.bookmarks.joinToString(" ") { "${it.verse}. ${it.text.trim()}" }
+                            val hideNums = viewModel.copyHideVerseNumbers.value
+                            val clipText = "${item.displayReference}\n" + item.bookmarks.joinToString(" ") { 
+                                if (hideNums) it.text.trim() else "${it.verse}. ${it.text.trim()}" 
+                            }
                             clipboard.setPrimaryClip(ClipData.newPlainText("Bible Verse", clipText))
                             Toast.makeText(requireContext(), "Chang copy a ni e", Toast.LENGTH_SHORT).show()
                         }
                         4 -> {
-                            val shareText = "${item.displayReference}\n" + item.bookmarks.joinToString(" ") { "${it.verse}. ${it.text.trim()}" }
+                            val hideNums = viewModel.copyHideVerseNumbers.value
+                            val shareText = "${item.displayReference}\n" + item.bookmarks.joinToString(" ") { 
+                                if (hideNums) it.text.trim() else "${it.verse}. ${it.text.trim()}" 
+                            }
                             val sendIntent = Intent().apply {
                                 action = Intent.ACTION_SEND
                                 putExtra(Intent.EXTRA_TEXT, shareText)
@@ -248,6 +255,7 @@ class SlideshowFragment : Fragment() {
         }?.colorInt ?: ContextCompat.getColor(context, R.color.bible_blue)
 
         val isSepia = ThemeHelper.getCurrentThemeMode(context) == ThemeHelper.ThemeMode.SEPIA
+        val cardColor = ThemeHelper.getEffectiveCardColor(context)
 
         fun createChipDrawable(isSelected: Boolean): GradientDrawable {
             return GradientDrawable().apply {
@@ -256,23 +264,30 @@ class SlideshowFragment : Fragment() {
                 if (isSelected) {
                     setColor(primaryColor)
                 } else {
-                    if (isDark) {
-                        setColor(Color.parseColor("#2E2F45"))
-                        setStroke((1 * density).toInt(), Color.parseColor("#44FFFFFF"))
+                    val chipBg = if (isDark) {
+                        cardColor ?: Color.parseColor("#2E2F45")
                     } else if (isSepia) {
-                        setColor(Color.parseColor("#E5D9C0"))
-                        setStroke((1 * density).toInt(), Color.parseColor("#DACFB9"))
+                        Color.parseColor("#E5D9C0")
                     } else {
-                        setColor(Color.parseColor("#ECE5D8"))
-                        setStroke((1 * density).toInt(), Color.parseColor("#DACFB9"))
+                        cardColor ?: ColorUtils.setAlphaComponent(primaryColor, 25)
                     }
+                    val strokeColor = if (isDark) {
+                        Color.parseColor("#35FFFFFF")
+                    } else if (isSepia) {
+                        Color.parseColor("#DACFB9")
+                    } else {
+                        ColorUtils.setAlphaComponent(primaryColor, 50)
+                    }
+                    setColor(chipBg)
+                    setStroke((1 * density).toInt(), strokeColor)
                 }
             }
         }
 
+        val unselectedChipBg = if (isDark) (cardColor ?: Color.parseColor("#2E2F45")) else if (isSepia) Color.parseColor("#E5D9C0") else (cardColor ?: ColorUtils.setAlphaComponent(primaryColor, 25))
         val selectedTextColor = if (ThemeHelper.isColorDark(primaryColor)) Color.WHITE else Color.parseColor("#1A1A1A")
         val fontColor = ThemeHelper.getEffectiveFontColor(context)
-        val unselectedTextColor = fontColor ?: if (isDark) Color.parseColor("#D3D4F2") else Color.parseColor("#5A5245")
+        val unselectedTextColor = ThemeHelper.getContrastingTextColor(unselectedChipBg, fontColor)
 
         val isAll = (testamentFilter == "ALL")
         binding.btnFilterAll.background = createChipDrawable(isAll)

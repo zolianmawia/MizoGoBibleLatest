@@ -405,25 +405,6 @@
                 android:orientation="horizontal"
                 android:paddingHorizontal="6dp">
 
-                <!-- Drawer Button -->
-                <ImageButton
-                    android:id="@+id/btn_bottom_drawer"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Open Drawer"
-                    android:padding="12dp"
-                    android:scaleType="fitCenter"
-                    android:src="@drawable/menu"
-                    app:tint="?attr/colorOnSurface" />
-
-                <View
-                    android:layout_width="1dp"
-                    android:layout_height="24dp"
-                    android:layout_marginEnd="4dp"
-                    android:alpha="0.15"
-                    android:background="?attr/colorOnSurface" />
-
                 <!-- Prev Chapter -->
                 <ImageView
                     android:id="@+id/btn_prev_chapter"
@@ -462,19 +443,6 @@
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
-
-        <com.google.android.material.bottomnavigation.BottomNavigationView
-            android:id="@+id/bottom_nav_view"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            app:backgroundTint="?attr/colorSurface"
-            app:itemActiveIndicatorStyle="@style/Widget.Material3.BottomNavigationView.ActiveIndicator"
-            app:itemIconTint="?attr/colorOnSurfaceVariant"
-            app:itemTextColor="?attr/colorOnSurfaceVariant"
-            app:labelVisibilityMode="labeled"
-            app:menu="@menu/bottom_navigation"
-            app:paddingBottomSystemWindowInsets="false" />
 
     </LinearLayout>
 

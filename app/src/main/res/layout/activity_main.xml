@@ -30,10 +30,13 @@
         android:layout_width="320dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:fitsSystemWindows="true"
+        android:fitsSystemWindows="false"
+        app:insetForeground="@android:color/transparent"
         app:headerLayout="@layout/nav_header_main"
         app:menu="@menu/navigation_drawer"
         app:itemIconSize="22dp"
+        app:subheaderTextAppearance="@style/NavDrawerSubheader"
+        app:itemTextAppearance="@style/NavDrawerItemText"
         app:itemShapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Medium" />
 
 </androidx.drawerlayout.widget.DrawerLayout>

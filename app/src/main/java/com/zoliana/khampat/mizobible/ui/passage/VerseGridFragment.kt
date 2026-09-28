@@ -1,13 +1,17 @@
 package com.zoliana.khampat.mizobible.ui.passage
 
+import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
+import android.widget.TextView
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -21,6 +25,7 @@ import com.zoliana.khampat.mizobible.data.UserDatabase
 import com.zoliana.khampat.mizobible.databinding.FragmentVerseGridBinding
 import com.zoliana.khampat.mizobible.ui.transform.TransformViewModel
 import com.zoliana.khampat.mizobible.ui.transform.TransformViewModelFactory
+import com.zoliana.khampat.mizobible.utils.ThemeHelper
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
@@ -65,8 +70,36 @@ class VerseGridFragment : Fragment() {
             findNavController().navigateUp()
         }
 
+        applyTheme()
         loadVerses()
         setupBottomCardListeners()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyTheme()
+    }
+
+    fun applyTheme() {
+        val ctx = context ?: return
+        val toolbarColor = ThemeHelper.getEffectiveToolbarColor(ctx)
+        val cardColor = ThemeHelper.getEffectiveCardColor(ctx) ?: toolbarColor
+        val fontColor = ThemeHelper.getEffectiveFontColor(ctx)
+        val iconColor = ThemeHelper.getEffectiveIconColor(ctx)
+        val primaryColor = ThemeHelper.getPrimaryColor(ctx)
+        val tbTextColor = ThemeHelper.getContrastingTextColor(toolbarColor, fontColor)
+        val tbIconColor = iconColor?.let { ThemeHelper.getContrastingTextColor(toolbarColor, it) } ?: tbTextColor
+        val cardTextColor = ThemeHelper.getContrastingTextColor(cardColor, fontColor)
+
+        binding.root.setBackgroundColor(toolbarColor)
+        binding.toolbar.setBackgroundColor(toolbarColor)
+        binding.toolbar.setTitleTextColor(tbTextColor)
+        binding.toolbar.navigationIcon?.setTint(tbIconColor)
+
+        binding.cardSelectedVerse.setCardBackgroundColor(cardColor)
+        binding.textSelectedVerseContent.setTextColor(cardTextColor)
+        binding.btnGoToVerse.backgroundTintList = ColorStateList.valueOf(primaryColor)
+        binding.btnGoToVerse.setTextColor(Color.WHITE)
     }
 
     private fun loadVerses() {
@@ -78,12 +111,33 @@ class VerseGridFragment : Fragment() {
             )
             if (verseCount > 0) {
                 val verses = (1..verseCount).map { it.toString() }
-                val adapter = ArrayAdapter(
-                    requireContext(),
-                    R.layout.item_chapter_grid,
-                    R.id.text_chapter,
-                    verses
-                )
+                val adapter = object : ArrayAdapter<String>(requireContext(), R.layout.item_chapter_grid, R.id.text_chapter, verses) {
+                    override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                        val view = super.getView(position, convertView, parent)
+                        val ctx = parent.context
+                        val toolbarColor = ThemeHelper.getEffectiveToolbarColor(ctx)
+                        val cardColor = ThemeHelper.getEffectiveCardColor(ctx) ?: toolbarColor
+                        val primaryColor = ThemeHelper.getPrimaryColor(ctx)
+                        val fontColor = ThemeHelper.getEffectiveFontColor(ctx)
+                        val textColor = ThemeHelper.getContrastingTextColor(cardColor, fontColor)
+                        val isDark = ThemeHelper.isColorDark(toolbarColor)
+
+                        val textView = view.findViewById<TextView>(R.id.text_chapter)
+                        textView.setTextColor(textColor)
+
+                        val boxDrawable = GradientDrawable().apply {
+                            shape = GradientDrawable.RECTANGLE
+                            cornerRadius = 16f * ctx.resources.displayMetrics.density
+                            setColor(cardColor)
+                            setStroke(
+                                (1.5f * ctx.resources.displayMetrics.density).toInt(),
+                                if (isDark) ColorUtils.setAlphaComponent(primaryColor, 180) else primaryColor
+                            )
+                        }
+                        textView.background = boxDrawable
+                        return view
+                    }
+                }
                 binding.gridViewVerses.adapter = adapter
 
                 binding.gridViewVerses.setOnItemClickListener { _, _, position, _ ->

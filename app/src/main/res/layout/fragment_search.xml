@@ -316,8 +316,7 @@
         android:id="@+id/layout_filter"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="?attr/colorSurface"
-        android:elevation="12dp"
+        android:elevation="0dp"
         android:orientation="horizontal"
         android:padding="12dp"
         android:visibility="visible"
@@ -327,7 +326,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_filter_ot"
-            style="@style/Widget.Material3.Button.TonalButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="3dp"
@@ -338,7 +337,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_filter_nt"
-            style="@style/Widget.Material3.Button.TonalButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="3dp"
@@ -349,7 +348,7 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_select_book"
-            style="@style/Widget.Material3.Button.TonalButton"
+            style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="3dp"

@@ -116,6 +116,7 @@ class ThemeSettingsDialog : BottomSheetDialogFragment() {
             val needsActivityRecreate = (selectedPreset != initialPreset)
 
             (activity as? MainActivity)?.applyThemeColors()
+            viewModel.refreshFontSettings()
 
             dismiss()
 
@@ -179,8 +180,10 @@ class ThemeSettingsDialog : BottomSheetDialogFragment() {
 
         val isToolbarDark = ThemeHelper.isColorDark(toolbarColor)
 
-        // 4. Custom font color from Font Settings if set
-        val customFontHex = ThemeHelper.getFontColor(context)
+        // 4. Custom font color from Font Settings if set for previewed mode
+        val isPreviewDark = (selectedPreset == ThemeHelper.ThemePreset.NIGHT) ||
+                (selectedPreset == ThemeHelper.ThemePreset.SYSTEM && isSystemNight)
+        val customFontHex = ThemeHelper.getFontColorForMode(context, isPreviewDark)
         val customFontColor = try {
             if (customFontHex.isNotBlank() && customFontHex != "default") {
                 Color.parseColor(customFontHex)

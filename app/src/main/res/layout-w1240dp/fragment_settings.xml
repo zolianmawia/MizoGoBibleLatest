@@ -155,47 +155,6 @@
                     android:text="Theme"
                     app:icon="@drawable/theme" />
 
-                <FrameLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
-
-                    <com.google.android.material.button.MaterialButton
-                        android:id="@+id/btn_navigation_layout_style"
-                        style="@style/Widget.Material3.Button.TextButton"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="start|center_vertical"
-                        android:text="Navigation Layout Style"
-                        app:icon="@drawable/home" />
-
-                    <TextView
-                        android:id="@+id/badge_new_layout"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_gravity="end|center_vertical"
-                        android:layout_marginEnd="12dp"
-                        android:background="@drawable/bg_new_badge"
-                        android:paddingHorizontal="8dp"
-                        android:paddingVertical="2dp"
-                        android:text="NEW"
-                        android:textColor="@color/white"
-                        android:textSize="10sp"
-                        android:textStyle="bold"
-                        android:visibility="gone" />
-                </FrameLayout>
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switch_eye_protection"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Mit Kham Venna" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switch_keep_screen_on"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Keep Screen On while reading" />
-
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 

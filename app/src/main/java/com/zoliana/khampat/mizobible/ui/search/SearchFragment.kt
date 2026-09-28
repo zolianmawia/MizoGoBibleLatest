@@ -1,6 +1,9 @@
 package com.zoliana.khampat.mizobible.ui.search
 
 import android.content.Context
+import android.content.res.ColorStateList
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -18,6 +21,7 @@ import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.GravityCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
@@ -27,6 +31,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
+import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.zoliana.khampat.mizobible.MainActivity
@@ -38,6 +43,7 @@ import com.zoliana.khampat.mizobible.data.UserDatabase
 import com.zoliana.khampat.mizobible.databinding.FragmentSearchBinding
 import com.zoliana.khampat.mizobible.ui.transform.TransformViewModel
 import com.zoliana.khampat.mizobible.ui.transform.TransformViewModelFactory
+import com.zoliana.khampat.mizobible.utils.ThemeHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -190,6 +196,99 @@ class SearchFragment : Fragment() {
             findNavController().popBackStack()
             mainActivity?.binding?.drawerLayout?.openDrawer(GravityCompat.START)
         }
+
+        applyTheme()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyTheme()
+    }
+
+    fun applyTheme() {
+        val b = binding ?: return
+        val ctx = context ?: return
+
+        val toolbarColor = ThemeHelper.getEffectiveToolbarColor(ctx)
+        val cardColor = ThemeHelper.getEffectiveCardColor(ctx) ?: toolbarColor
+        val fontColor = ThemeHelper.getEffectiveFontColor(ctx)
+        val iconColor = ThemeHelper.getEffectiveIconColor(ctx)
+        val primaryColor = ThemeHelper.getPrimaryColor(ctx)
+        val isDark = ThemeHelper.isColorDark(toolbarColor)
+        val textColor = ThemeHelper.getContrastingTextColor(toolbarColor, fontColor)
+        val iconTint = iconColor?.let { ThemeHelper.getContrastingTextColor(toolbarColor, it) } ?: textColor
+        val density = resources.displayMetrics.density
+
+        // 1. Root & Header Area
+        b.root.setBackgroundColor(toolbarColor)
+        b.root.findViewById<View>(R.id.main_content)?.setBackgroundColor(toolbarColor)
+        b.recyclerSearchResults.setBackgroundColor(toolbarColor)
+        b.textSearchTitle.setTextColor(textColor)
+        b.btnDrawer.setColorFilter(iconTint)
+
+        // Version selector button
+        b.btnSearchVersion.setTextColor(primaryColor)
+        b.btnSearchVersion.iconTint = ColorStateList.valueOf(primaryColor)
+
+        // 2. Search Bar
+        b.searchBarBackground.setCardBackgroundColor(cardColor)
+        b.searchBarBackground.strokeColor = ColorUtils.setAlphaComponent(primaryColor, 80)
+        b.searchBarBackground.strokeWidth = (1.5f * density).toInt()
+        b.iconSearch.setColorFilter(primaryColor)
+        b.editSearch.setTextColor(textColor)
+        b.editSearch.setHintTextColor(ColorUtils.setAlphaComponent(textColor, 130))
+        b.btnClearSearch.setColorFilter(iconTint)
+        b.textSearchCount.setTextColor(primaryColor)
+
+        // 3. Fuzzy Switch & Label
+        val fuzzyLabel = (b.layoutFuzzy.getChildAt(0) as? TextView)
+        fuzzyLabel?.setTextColor(ColorUtils.setAlphaComponent(textColor, 200))
+        b.btnFuzzyToggle.thumbTintList = ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf(-android.R.attr.state_checked)),
+            intArrayOf(primaryColor, if (isDark) Color.parseColor("#888888") else Color.parseColor("#B0B0B0"))
+        )
+        b.btnFuzzyToggle.trackTintList = ColorStateList(
+            arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf(-android.R.attr.state_checked)),
+            intArrayOf(ColorUtils.setAlphaComponent(primaryColor, 120), if (isDark) Color.parseColor("#444444") else Color.parseColor("#D0D0D0"))
+        )
+
+        // 4. Smart search suggestion card
+        b.cardSearchSuggestion?.setCardBackgroundColor(cardColor)
+        b.cardSearchSuggestion?.strokeColor = ColorUtils.setAlphaComponent(primaryColor, 100)
+        b.textSuggestionLabel?.setTextColor(ColorUtils.setAlphaComponent(textColor, 200))
+        b.textSuggestedPhrase?.setTextColor(primaryColor)
+        b.btnApplySuggestion?.setTextColor(primaryColor)
+
+        // 5. History container
+        b.layoutSearchHistory.setBackgroundColor(toolbarColor)
+        b.btnClearHistory.setTextColor(primaryColor)
+
+        // 6. Dismiss Handle
+        val handleBar = b.dismissHandle.getChildAt(0)
+        handleBar?.setBackgroundColor(ColorUtils.setAlphaComponent(textColor, 90))
+
+        // 7. Bottom Filters Bar Container
+        val filterBg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            val bg = if (cardColor != toolbarColor) cardColor else toolbarColor
+            setColor(bg)
+            val strokeCol = if (isDark) Color.parseColor("#26FFFFFF") else ColorUtils.setAlphaComponent(primaryColor, 50)
+            setStroke((1 * density).toInt(), strokeCol)
+        }
+        b.layoutFilter.background = filterBg
+        b.layoutFilter.elevation = 0f
+
+        // Empty state text
+        b.emptyState.root.findViewById<TextView>(R.id.text_empty_message)?.setTextColor(ColorUtils.setAlphaComponent(textColor, 150))
+
+        updateFilterUI()
+
+        if (::searchAdapter.isInitialized) {
+            searchAdapter.notifyDataSetChanged()
+        }
+        if (::historyAdapter.isInitialized) {
+            historyAdapter.notifyDataSetChanged()
+        }
     }
 
     private fun showVersionSelectionDialog() {
@@ -228,6 +327,7 @@ class SearchFragment : Fragment() {
         "burmesebible" -> "MYJ"
         "niv" -> "NIV"
         "mzcl" -> "MzCL"
+        "bangla", "banglaov" -> "BanglaOV"
         else -> v.uppercase()
     }
 
@@ -239,6 +339,7 @@ class SearchFragment : Fragment() {
         "burmesebible" -> "Myanmar Judson (MYJ)"
         "niv" -> "New International Version (NIV)"
         "mzcl" -> "Mizo Common Language (MzCL)"
+        "bangla", "banglaov" -> "Bangla Old Version (BanglaOV)"
         else -> v.uppercase()
     }
 
@@ -426,17 +527,57 @@ class SearchFragment : Fragment() {
     }
 
     private fun updateFilterUI() {
+        val b = binding ?: return
+        val ctx = context ?: return
+        val primaryColor = ThemeHelper.getPrimaryColor(ctx)
+        val toolbarColor = ThemeHelper.getEffectiveToolbarColor(ctx)
+        val cardColor = ThemeHelper.getEffectiveCardColor(ctx) ?: toolbarColor
+        val fontColor = ThemeHelper.getEffectiveFontColor(ctx)
+        val textColor = ThemeHelper.getContrastingTextColor(toolbarColor, fontColor)
+        val inactiveBg = cardColor
+        val inactiveStroke = ColorUtils.setAlphaComponent(primaryColor, 90)
+
         val isBookSelected = selectedBook != "All Books"
-        binding?.btnFilterOt?.apply {
-            isEnabled = !isBookSelected; alpha =
-            if (isBookSelected) 0.2f else (if (currentFilter == "OT") 1.0f else 0.5f)
+        val isDark = ThemeHelper.isColorDark(toolbarColor)
+        val density = resources.displayMetrics.density
+
+        fun styleButton(button: MaterialButton, isSelected: Boolean, isEnabled: Boolean) {
+            button.isEnabled = isEnabled
+            button.cornerRadius = (20 * density).toInt()
+            if (isSelected) {
+                button.backgroundTintList = ColorStateList.valueOf(primaryColor)
+                button.strokeColor = ColorStateList.valueOf(primaryColor)
+                button.strokeWidth = 0
+                button.setTextColor(Color.WHITE)
+                button.iconTint = ColorStateList.valueOf(Color.WHITE)
+                button.alpha = 1.0f
+            } else {
+                val inactiveBg = if (isDark) {
+                    ColorUtils.blendARGB(cardColor, primaryColor, 0.15f)
+                } else {
+                    ColorUtils.blendARGB(cardColor, primaryColor, 0.12f)
+                }
+                val strokeColor = ColorUtils.setAlphaComponent(primaryColor, if (isDark) 160 else 180)
+                button.backgroundTintList = ColorStateList.valueOf(inactiveBg)
+                button.strokeColor = ColorStateList.valueOf(strokeColor)
+                button.strokeWidth = (1.5f * density).toInt()
+
+                val btnTextColor = if (isDark) Color.WHITE else primaryColor
+                button.setTextColor(btnTextColor)
+                button.iconTint = ColorStateList.valueOf(btnTextColor)
+                button.alpha = if (isEnabled) 1.0f else 0.4f
+            }
         }
-        binding?.btnFilterNt?.apply {
-            isEnabled = !isBookSelected; alpha =
-            if (isBookSelected) 0.2f else (if (currentFilter == "NT") 1.0f else 0.5f)
-        }
-        binding?.editSearch?.hint = when {
-            isBookSelected -> "$selectedBook chhunga mi chiah thlang rawh"; currentFilter == "OT" -> "Thuthlung Hlui a mi chiah zawng rawh"; currentFilter == "NT" -> "Thuthlung Thar a mi chiah zawng rawh"; else -> "Bible zawng rawh..."
+
+        styleButton(b.btnFilterOt, currentFilter == "OT" && !isBookSelected, !isBookSelected)
+        styleButton(b.btnFilterNt, currentFilter == "NT" && !isBookSelected, !isBookSelected)
+        styleButton(b.btnSelectBook, isBookSelected, true)
+
+        b.editSearch.hint = when {
+            isBookSelected -> "$selectedBook chhunga mi chiah thlang rawh"
+            currentFilter == "OT" -> "Thuthlung Hlui a mi chiah zawng rawh"
+            currentFilter == "NT" -> "Thuthlung Thar a mi chiah zawng rawh"
+            else -> "Bible zawng rawh..."
         }
     }
 

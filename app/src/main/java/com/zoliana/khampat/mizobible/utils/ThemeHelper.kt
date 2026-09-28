@@ -30,7 +30,11 @@ object ThemeHelper {
     const val KEY_APP_COLOR = "app_color_theme"
     const val KEY_THEME_STYLE = "app_theme_style"
     const val KEY_FONT_COLOR = "font_color"
+    const val KEY_FONT_COLOR_LIGHT = "font_color_light"
+    const val KEY_FONT_COLOR_DARK = "font_color_dark"
     const val KEY_ICON_COLOR = "custom_icon_color"
+    const val KEY_ICON_COLOR_LIGHT = "icon_color_light"
+    const val KEY_ICON_COLOR_DARK = "icon_color_dark"
     const val KEY_THEME_MODE = "theme_mode"
     const val KEY_CUSTOM_THEME_COLOR = "custom_theme_mode_color"
     const val KEY_TOOLBAR_COLOR = "custom_toolbar_color"
@@ -223,18 +227,81 @@ object ThemeHelper {
         AppColorOption("rose", "Sunset Rose", "#C2185B", R.style.Theme_MizoGoBible_NoActionBar_Rose)
     )
 
-    val FONT_COLORS = listOf(
-        FontColorOption("default", "Auto (Default)", "", Color.parseColor("#424242")),
+    // Dark Mode check: True if current theme/preset or system night mode is Dark
+    fun isDarkMode(context: Context): Boolean {
+        val preset = getSelectedThemePreset(context)
+        return when (preset) {
+            ThemePreset.NIGHT -> true
+            ThemePreset.LIGHT, ThemePreset.RED, ThemePreset.BLUE, ThemePreset.GREEN, ThemePreset.YELLOW, ThemePreset.WHITE -> false
+            ThemePreset.SYSTEM -> {
+                (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+            }
+        }
+    }
+
+    // Effective background check: True if current toolbar/verse background is dark
+    fun isCurrentThemeDark(context: Context): Boolean {
+        if (isDarkMode(context)) return true
+        val bg = getEffectiveToolbarColor(context)
+        return isColorDark(bg)
+    }
+
+    // High-contrast, dark, clear fonts for Light Mode (Earthy, White, Red, Blue, Green, Yellow themes)
+    // ONLY clearly visible dark tones: No white, light cream, pale gold or low-contrast washed-out tones
+    val LIGHT_MODE_FONT_COLORS = listOf(
+        FontColorOption("default", "Auto (Default)", "", Color.parseColor("#201A1B")),
         FontColorOption("black", "Pitch Black", "#000000", Color.parseColor("#000000")),
         FontColorOption("charcoal", "Soft Charcoal", "#262626", Color.parseColor("#262626")),
         FontColorOption("sepia", "Sepia Brown", "#3E2723", Color.parseColor("#3E2723")),
         FontColorOption("navy", "Deep Navy", "#0D1B2A", Color.parseColor("#0D1B2A")),
         FontColorOption("forest", "Forest Slate", "#1B3828", Color.parseColor("#1B3828")),
+        FontColorOption("wine", "Crimson Wine", "#4A1521", Color.parseColor("#4A1521")),
+        FontColorOption("plum", "Deep Plum", "#3E1B4A", Color.parseColor("#3E1B4A")),
+        FontColorOption("teal", "Dark Teal", "#00363A", Color.parseColor("#00363A"))
+    )
+
+    // High-contrast, white-toned, light glowing fonts for Dark Mode (Night / AMOLED themes)
+    // ONLY usable light/white tones: No black, charcoal, sepia, deep navy, or dark tones
+    val DARK_MODE_FONT_COLORS = listOf(
+        FontColorOption("default", "Auto (Default)", "", Color.parseColor("#FFFFFF")),
         FontColorOption("white", "Pure White", "#FFFFFF", Color.parseColor("#FFFFFF")),
         FontColorOption("cream", "Warm Cream", "#FFF8E7", Color.parseColor("#FFF8E7")),
         FontColorOption("silver", "Soft Silver", "#D3D4F2", Color.parseColor("#D3D4F2")),
-        FontColorOption("gold", "Golden Amber", "#FFD54F", Color.parseColor("#FFD54F"))
+        FontColorOption("gold", "Golden Amber", "#FFE082", Color.parseColor("#FFE082")),
+        FontColorOption("ice_blue", "Ice Blue", "#B3E5FC", Color.parseColor("#B3E5FC")),
+        FontColorOption("mint", "Mint Glow", "#C8E6C9", Color.parseColor("#C8E6C9")),
+        FontColorOption("rose", "Rose Glow", "#F8BBD0", Color.parseColor("#F8BBD0"))
     )
+
+    val FONT_COLORS: List<FontColorOption>
+        get() = LIGHT_MODE_FONT_COLORS
+
+    // Dynamically returns only font colors suitable for the active mode and theme
+    fun getAvailableFontColors(context: Context): List<FontColorOption> {
+        val isDark = isCurrentThemeDark(context)
+        val bg = getEffectiveToolbarColor(context)
+        return if (isDark) {
+            DARK_MODE_FONT_COLORS.filter { option ->
+                if (option.hex.isEmpty()) true
+                else {
+                    try {
+                        val c = Color.parseColor(option.hex)
+                        !isColorDark(c) && ColorUtils.calculateContrast(c, bg) >= 3.8
+                    } catch (_: Exception) { true }
+                }
+            }
+        } else {
+            LIGHT_MODE_FONT_COLORS.filter { option ->
+                if (option.hex.isEmpty()) true
+                else {
+                    try {
+                        val c = Color.parseColor(option.hex)
+                        isColorDark(c) && ColorUtils.calculateContrast(c, bg) >= 3.8
+                    } catch (_: Exception) { true }
+                }
+            }
+        }
+    }
 
     fun getSelectedThemePreset(context: Context): ThemePreset {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -441,19 +508,32 @@ object ThemeHelper {
 
     fun getCustomIconColor(context: Context): String {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getString(KEY_ICON_COLOR, "") ?: ""
+        val isDark = isCurrentThemeDark(context)
+        val key = if (isDark) KEY_ICON_COLOR_DARK else KEY_ICON_COLOR_LIGHT
+        return prefs.getString(key, null) ?: prefs.getString(KEY_ICON_COLOR, "") ?: ""
     }
 
     fun setCustomIconColor(context: Context, hex: String) {
-        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit().putString(KEY_ICON_COLOR, hex).apply()
+        setFontColor(context, hex)
     }
 
     fun getEffectiveFontColor(context: Context): Int? {
         val hex = getFontColor(context)
         if (hex.isNotBlank() && hex != "default") {
             try {
-                return Color.parseColor(if (hex.startsWith("#")) hex else "#$hex")
+                val color = Color.parseColor(if (hex.startsWith("#")) hex else "#$hex")
+                val isDark = isCurrentThemeDark(context)
+                val bg = getEffectiveToolbarColor(context)
+                val contrast = ColorUtils.calculateContrast(color, bg)
+                // In Dark mode: dark colors are invalid (contrast < 3.0 or dark color)
+                if (isDark && (isColorDark(color) || contrast < 3.0)) {
+                    return null
+                }
+                // In Light mode: light/faint colors are invalid (contrast < 3.0 or not dark)
+                if (!isDark && (!isColorDark(color) || contrast < 3.0)) {
+                    return null
+                }
+                return color
             } catch (_: Exception) {}
         }
         return null
@@ -463,7 +543,13 @@ object ThemeHelper {
         val customIcon = getCustomIconColor(context)
         if (customIcon.isNotBlank() && customIcon != "default") {
             try {
-                return Color.parseColor(if (customIcon.startsWith("#")) customIcon else "#$customIcon")
+                val color = Color.parseColor(if (customIcon.startsWith("#")) customIcon else "#$customIcon")
+                val isDark = isCurrentThemeDark(context)
+                val bg = getEffectiveToolbarColor(context)
+                val contrast = ColorUtils.calculateContrast(color, bg)
+                if (isDark && (isColorDark(color) || contrast < 3.0)) return null
+                if (!isDark && (!isColorDark(color) || contrast < 3.0)) return null
+                return color
             } catch (_: Exception) {}
         }
         return getEffectiveFontColor(context)
@@ -474,7 +560,7 @@ object ThemeHelper {
     }
 
     fun applyThemeToView(context: Context, view: View) {
-        if (view.id == R.id.dialog_theme_settings_root) return
+        if (view.id == R.id.dialog_theme_settings_root || view.id == R.id.dialog_font_settings_root || view.id == R.id.dialog_bible_versions_root) return
 
         val toolbarColor = getEffectiveToolbarColor(context)
         val bgColor = toolbarColor
@@ -509,7 +595,7 @@ object ThemeHelper {
         iconColor: Int?,
         insideCardDark: Boolean? = null
     ) {
-        if (view.id == R.id.dialog_theme_settings_root) return
+        if (view.id == R.id.dialog_theme_settings_root || view.id == R.id.dialog_font_settings_root || view.id == R.id.dialog_bible_versions_root || view.id == R.id.nav_view) return
 
         var currentInsideCardDark = insideCardDark
 
@@ -546,8 +632,7 @@ object ThemeHelper {
 
     fun applySingleViewStyling(view: View, fontColor: Int?, iconColor: Int?) {
         val viewId = view.id
-        if (viewId == R.id.badge_new_layout ||
-            viewId == R.id.view_update_badge ||
+        if (viewId == R.id.view_update_badge ||
             viewId == R.id.icon_checkmark ||
             viewId == R.id.view_color_circle ||
             viewId == R.id.view_selection_ring ||
@@ -555,7 +640,14 @@ object ThemeHelper {
             viewId == R.id.btn_filter_all ||
             viewId == R.id.btn_filter_ot ||
             viewId == R.id.btn_filter_nt ||
-            viewId == R.id.img_header_bg) {
+            viewId == R.id.btn_done ||
+            viewId == R.id.btn_apply_theme ||
+            viewId == R.id.img_header_bg ||
+            viewId == R.id.text_header_title ||
+            viewId == R.id.text_header_subtitle) {
+            if ((viewId == R.id.btn_done || viewId == R.id.btn_apply_theme) && view is MaterialButton) {
+                view.setTextColor(Color.WHITE)
+            }
             return
         }
 
@@ -570,6 +662,31 @@ object ThemeHelper {
         }
 
         if (view is MaterialButton) {
+            if (viewId == R.id.btn_reset_all) {
+                val ctx = view.context
+                val isDark = isCurrentThemeDark(ctx)
+                val deleteRed = if (isDark) Color.parseColor("#FF6B6B") else Color.parseColor("#D32F2F")
+                val cardColor = getEffectiveCardColor(ctx) ?: if (isDark) Color.parseColor("#2E2F45") else Color.parseColor("#FCE4EC")
+                view.backgroundTintList = ColorStateList.valueOf(cardColor)
+                view.setTextColor(deleteRed)
+                view.iconTint = ColorStateList.valueOf(deleteRed)
+                view.strokeColor = ColorStateList.valueOf(ColorUtils.setAlphaComponent(deleteRed, if (isDark) 90 else 60))
+                view.strokeWidth = (1.5f * ctx.resources.displayMetrics.density).toInt()
+                return
+            }
+            if (viewId == R.id.btn_done || viewId == R.id.btn_apply_theme) {
+                view.setTextColor(Color.WHITE)
+                return
+            }
+            val bgTint = view.backgroundTintList?.defaultColor
+            if (bgTint != null && bgTint != 0 && bgTint != Color.TRANSPARENT) {
+                val contrastColor = getContrastingTextColor(bgTint)
+                view.setTextColor(contrastColor)
+                if (iconColor != null) {
+                    view.iconTint = ColorStateList.valueOf(contrastColor)
+                }
+                return
+            }
             if (fontColor != null) {
                 view.setTextColor(fontColor)
             }
@@ -638,16 +755,52 @@ object ThemeHelper {
         applyThemeToView(context, view)
     }
 
-    fun getFontColor(context: Context): String {
+    fun getFontColorForMode(context: Context, isDark: Boolean): String {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        return prefs.getString(KEY_FONT_COLOR, "") ?: ""
+        return if (isDark) {
+            val darkVal = prefs.getString(KEY_FONT_COLOR_DARK, null)
+            if (darkVal != null) return darkVal
+            // Legacy migration: if KEY_FONT_COLOR exists and is a light color, use it
+            val legacy = prefs.getString(KEY_FONT_COLOR, "") ?: ""
+            if (legacy.isNotBlank() && legacy != "default") {
+                try {
+                    val c = Color.parseColor(if (legacy.startsWith("#")) legacy else "#$legacy")
+                    if (!isColorDark(c)) return legacy
+                } catch (_: Exception) {}
+            }
+            ""
+        } else {
+            val lightVal = prefs.getString(KEY_FONT_COLOR_LIGHT, null)
+            if (lightVal != null) return lightVal
+            // Legacy migration: if KEY_FONT_COLOR exists and is a dark color, use it
+            val legacy = prefs.getString(KEY_FONT_COLOR, "") ?: ""
+            if (legacy.isNotBlank() && legacy != "default") {
+                try {
+                    val c = Color.parseColor(if (legacy.startsWith("#")) legacy else "#$legacy")
+                    if (isColorDark(c)) return legacy
+                } catch (_: Exception) {}
+            }
+            ""
+        }
+    }
+
+    fun getFontColor(context: Context): String {
+        return getFontColorForMode(context, isCurrentThemeDark(context))
     }
 
     fun setFontColor(context: Context, hex: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        prefs.edit()
-            .putString(KEY_FONT_COLOR, hex)
-            .putString(KEY_ICON_COLOR, hex)
-            .apply()
+        val isDark = isCurrentThemeDark(context)
+        val editor = prefs.edit()
+        if (isDark) {
+            editor.putString(KEY_FONT_COLOR_DARK, hex)
+            editor.putString(KEY_ICON_COLOR_DARK, hex)
+        } else {
+            editor.putString(KEY_FONT_COLOR_LIGHT, hex)
+            editor.putString(KEY_ICON_COLOR_LIGHT, hex)
+        }
+        editor.putString(KEY_FONT_COLOR, hex)
+        editor.putString(KEY_ICON_COLOR, hex)
+        editor.apply()
     }
 }

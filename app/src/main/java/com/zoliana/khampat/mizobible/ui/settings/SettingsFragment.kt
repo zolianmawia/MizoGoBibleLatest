@@ -139,45 +139,12 @@ class SettingsFragment : Fragment() {
             (requireActivity() as? MainActivity)?.limitDialogWidth(dialog)
         }
 
-        val hasSeenNewLayout = prefs.getBoolean("has_seen_new_navigation_layout", false)
-        binding.badgeNewLayout?.visibility = if (hasSeenNewLayout) View.GONE else View.VISIBLE
-
-        binding.btnNavigationLayoutStyle?.setOnClickListener {
-            prefs.edit().putBoolean("has_seen_new_navigation_layout", true).apply()
-            binding.badgeNewLayout?.visibility = View.GONE
-
-            val styles = arrayOf("Classic Layout (Default)", "Modern Floating Bar")
-            val currentStyle = prefs.getString("app_layout_style", "Classic")
-            val checkedItem = if (currentStyle == "Modern") 1 else 0
-
-            val dialog = MaterialAlertDialogBuilder(requireContext())
-                .setTitle("Navigation Layout Style")
-                .setSingleChoiceItems(styles, checkedItem) { dialogInterface, which ->
-                    val selectedStyle = if (which == 1) "Modern" else "Classic"
-                    prefs.edit().putString("app_layout_style", selectedStyle).apply()
-                    dialogInterface.dismiss()
-
-                    (activity as? MainActivity)?.applyLayoutStyle()
-                }
-                .show()
-            (requireActivity() as? MainActivity)?.limitDialogWidth(dialog)
-        }
-
-        // Eye Protection Switch logic
-        binding.switchEyeProtection.isChecked = viewModel.isEyeProtectionEnabled.value
-        binding.switchEyeProtection.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.setEyeProtectionEnabled(isChecked)
-        }
-
-        binding.switchKeepScreenOn.isChecked = viewModel.keepScreenOn.value
-        binding.switchKeepScreenOn.setOnCheckedChangeListener { _, isChecked ->
-            viewModel.setKeepScreenOn(isChecked)
-        }
-
         // --- Bible Copy Settings ---
         viewLifecycleOwner.lifecycleScope.launch {
             viewModel.copyIncludeReference.collectLatest {
                 binding.switchCopyIncludeReference?.isChecked = it
+                binding.switchCopyReferenceTopBottom?.isEnabled = it
+                binding.layoutCopyRefBottom?.alpha = if (it) 1.0f else 0.4f
             }
         }
         viewLifecycleOwner.lifecycleScope.launch {
@@ -185,14 +152,36 @@ class SettingsFragment : Fragment() {
                 binding.switchCopyReferenceTopBottom?.isChecked = it
             }
         }
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewModel.copyHideVerseNumbers.collectLatest {
+                binding.switchCopyHideVerseNumbers?.isChecked = it
+            }
+        }
 
         binding.switchCopyIncludeReference?.setOnCheckedChangeListener { _, isChecked ->
             viewModel.setCopyIncludeReference(isChecked)
             binding.switchCopyReferenceTopBottom?.isEnabled = isChecked
+            binding.layoutCopyRefBottom?.alpha = if (isChecked) 1.0f else 0.4f
         }
 
         binding.switchCopyReferenceTopBottom?.setOnCheckedChangeListener { _, isChecked ->
             viewModel.setCopyReferenceAtBottom(isChecked)
+        }
+
+        binding.switchCopyHideVerseNumbers?.setOnCheckedChangeListener { _, isChecked ->
+            viewModel.setCopyHideVerseNumbers(isChecked)
+        }
+
+        binding.layoutCopyIncludeRef?.setOnClickListener {
+            binding.switchCopyIncludeReference?.toggle()
+        }
+        binding.layoutCopyRefBottom?.setOnClickListener {
+            if (binding.switchCopyReferenceTopBottom?.isEnabled == true) {
+                binding.switchCopyReferenceTopBottom?.toggle()
+            }
+        }
+        binding.layoutCopyHideVerseNumbers?.setOnClickListener {
+            binding.switchCopyHideVerseNumbers?.toggle()
         }
 
         binding.btnClearCache?.setOnClickListener {
@@ -217,6 +206,7 @@ class SettingsFragment : Fragment() {
         } catch (e: Exception) {
             binding.textAppVersion.visibility = View.GONE
         }
+        applyCustomViewThemes()
     }
 
     private fun enableDailyVerseNotification() {
@@ -230,6 +220,23 @@ class SettingsFragment : Fragment() {
         super.onResume()
         requireActivity().findViewById<View>(R.id.bottom_container)?.visibility = View.GONE
         ThemeHelper.applyThemeToView(requireContext(), binding.root)
+        applyCustomViewThemes()
+    }
+
+    private fun applyCustomViewThemes() {
+        val ctx = context ?: return
+        val cardColor = ThemeHelper.getEffectiveCardColor(ctx)
+        val isDark = ThemeHelper.isCurrentThemeDark(ctx)
+        val deleteRed = if (isDark) android.graphics.Color.parseColor("#FF6B6B") else android.graphics.Color.parseColor("#D32F2F")
+        val btnBg = cardColor ?: if (isDark) android.graphics.Color.parseColor("#2E2F45") else android.graphics.Color.parseColor("#FCE4EC")
+        
+        binding.btnResetAll.backgroundTintList = android.content.res.ColorStateList.valueOf(btnBg)
+        binding.btnResetAll.setTextColor(deleteRed)
+        binding.btnResetAll.iconTint = android.content.res.ColorStateList.valueOf(deleteRed)
+        binding.btnResetAll.strokeColor = android.content.res.ColorStateList.valueOf(
+            androidx.core.graphics.ColorUtils.setAlphaComponent(deleteRed, if (isDark) 90 else 60)
+        )
+        binding.btnResetAll.strokeWidth = (1.5f * resources.displayMetrics.density).toInt()
     }
 
     override fun onPause() {

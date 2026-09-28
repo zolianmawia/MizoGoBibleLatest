@@ -15,6 +15,7 @@ import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
+import android.graphics.Outline
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.Rect
@@ -22,6 +23,11 @@ import android.graphics.Shader
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.StateListDrawable
+import android.view.ViewOutlineProvider
+import com.google.android.material.shape.CornerFamily
+import com.google.android.material.shape.MaterialShapeDrawable
+import com.google.android.material.shape.ShapeAppearanceModel
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -181,15 +187,10 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
             // Tichuan AppBarLayout kan hide hunah fragment kha a chung berah a in-nawr chho thei ang
             binding.appBarMain.appBarLayout.updatePadding(top = systemBars.top)
 
-            val prefs = getSharedPreferences("bible_prefs", MODE_PRIVATE)
-            val layoutStyle = prefs.getString("app_layout_style", "Classic")
-
             val bottomPadding = if (ime.bottom > 0) {
                 ime.bottom
-            } else if (layoutStyle == "Modern") {
-                systemBars.bottom
             } else {
-                0
+                systemBars.bottom
             }
             binding.appBarMain.bottomContainer.updatePadding(bottom = bottomPadding)
 
@@ -235,41 +236,42 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
             handled
         }
 
-        setupNavHeaderBadges()
-        setupSplitModeToggle(binding.navView)
+        binding.drawerLayout.setStatusBarBackgroundColor(android.graphics.Color.TRANSPARENT)
+        binding.drawerLayout.setStatusBarBackground(null)
+        ViewCompat.setOnApplyWindowInsetsListener(binding.navView) { view, insets ->
+            val navBars = insets.getInsets(WindowInsetsCompat.Type.navigationBars())
+            view.updatePadding(top = 0, bottom = navBars.bottom)
+            insets
+        }
 
-        val bottomNav = binding.appBarMain.bottomNavView
-        bottomNav.setupWithNavController(navController)
-        bottomNav.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.nav_home -> {
-                    if (navController.currentDestination?.id != R.id.nav_home) {
-                        navController.navigate(R.id.nav_home)
-                    }
-                    true
+        binding.navView.addOnLayoutChangeListener { v, left, top, right, bottom, oldL, oldT, oldR, oldB ->
+            if (right - left != oldR - oldL || bottom - top != oldB - oldT) {
+                v.invalidateOutline()
+                if (binding.navView.headerCount > 0) {
+                    binding.navView.getHeaderView(0).invalidateOutline()
                 }
-
-                R.id.nav_pin -> {
-                    val nhf =
-                        supportFragmentManager.findFragmentById(R.id.nav_host_fragment_content_main) as? NavHostFragment
-                    val fragment = nhf?.childFragmentManager?.primaryNavigationFragment
-                        ?: nhf?.childFragmentManager?.fragments?.firstOrNull { it is TransformFragment }
-
-                    if (navController.currentDestination?.id == R.id.nav_home && fragment is TransformFragment) {
-                        fragment.showPinSelectionPopup(bottomNav)
-                        false
-                    } else {
-                        NavigationUI.onNavDestinationSelected(item, navController)
-                    }
-                }
-
-                else -> NavigationUI.onNavDestinationSelected(item, navController)
             }
         }
 
-        binding.appBarMain.btnBottomDrawer.setOnClickListener {
-            binding.drawerLayout.openDrawer(GravityCompat.START)
-        }
+        binding.drawerLayout.addDrawerListener(object : androidx.drawerlayout.widget.DrawerLayout.SimpleDrawerListener() {
+            override fun onDrawerSlide(drawerView: View, slideOffset: Float) {
+                val insetsController = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
+                if (slideOffset > 0.15f) {
+                    insetsController.isAppearanceLightStatusBars = false
+                } else {
+                    val tbColor = ThemeHelper.getEffectiveToolbarColor(this@MainActivity)
+                    insetsController.isAppearanceLightStatusBars = !ThemeHelper.isColorDark(tbColor)
+                }
+            }
+
+            override fun onDrawerClosed(drawerView: View) {
+                val tbColor = ThemeHelper.getEffectiveToolbarColor(this@MainActivity)
+                androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = !ThemeHelper.isColorDark(tbColor)
+            }
+        })
+
+        setupNavHeaderBadges()
+        setupSplitModeToggle(binding.navView)
 
         navController.addOnDestinationChangedListener { _, destination, _ ->
             val passageSelectionScreens = listOf(
@@ -422,7 +424,20 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         val premiumBadge = headerView.findViewById<View>(R.id.layout_premium_badge)
         val silverBadge = headerView.findViewById<View>(R.id.layout_patron_badge)
         val goldBadge = headerView.findViewById<View>(R.id.layout_live_badge)
+        val headerTitle = headerView.findViewById<TextView>(R.id.text_header_title)
         val headerSubtitle = headerView.findViewById<TextView>(R.id.text_header_subtitle)
+
+        val toolbarColor = ThemeHelper.getEffectiveToolbarColor(this)
+        val isDrawerDark = ThemeHelper.isColorDark(toolbarColor)
+        val navTextColor = if (isDrawerDark) Color.WHITE else Color.BLACK
+
+        applyDrawerCornersAndBackground(toolbarColor)
+        headerTitle?.setTextColor(navTextColor)
+        headerSubtitle?.setTextColor(navTextColor)
+
+        headerView.findViewById<TextView>(R.id.text_gold_title)?.setTextColor(Color.WHITE)
+        headerView.findViewById<TextView>(R.id.text_silver_title)?.setTextColor(Color.WHITE)
+        headerView.findViewById<TextView>(R.id.text_premium_title)?.setTextColor(Color.WHITE)
 
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -431,19 +446,26 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
                     silverBadge?.visibility = View.GONE
                     goldBadge?.visibility = View.GONE
 
+                    val tbColor = ThemeHelper.getEffectiveToolbarColor(this@MainActivity)
+                    val isDark = ThemeHelper.isColorDark(tbColor)
+                    val currentNavTextColor = if (isDark) Color.WHITE else Color.BLACK
+
                     when (type) {
                         MembershipType.SILVER -> {
                             silverBadge?.visibility = View.VISIBLE
                             headerSubtitle?.text = "Silver Member i ni e! ✨"
+                            headerSubtitle?.setTextColor(currentNavTextColor)
                         }
 
                         MembershipType.GOLD -> {
                             goldBadge?.visibility = View.VISIBLE
                             headerSubtitle?.text = "Gold Member i ni e! 💎"
+                            headerSubtitle?.setTextColor(currentNavTextColor)
                         }
 
                         MembershipType.FREE -> {
                             headerSubtitle?.text = getString(R.string.nav_header_subtitle)
+                            headerSubtitle?.setTextColor(currentNavTextColor)
                         }
                     }
                 }
@@ -454,6 +476,8 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
     override fun onResume() {
         super.onResume()
         updateNavHistoryVisibility()
+        viewModel.refreshFontSettings()
+        applyThemeColors()
     }
 
     fun startRazorpayPayment(
@@ -867,11 +891,6 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
     }
 
     fun applyLayoutStyle() {
-        val prefs = getSharedPreferences("bible_prefs", MODE_PRIVATE)
-        val layoutStyle = prefs.getString("app_layout_style", "Classic")
-
-        val bottomNav = binding.appBarMain.bottomNavView
-        val btnDrawer = binding.appBarMain.btnBottomDrawer
         val nhf =
             supportFragmentManager.findFragmentById(R.id.nav_host_fragment_content_main) as? NavHostFragment
         val navController = nhf?.navController
@@ -879,24 +898,14 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         val isPinOrBookmark = navController?.currentDestination?.id == R.id.nav_pin ||
                 navController?.currentDestination?.id == R.id.nav_bookmark
 
-        if (layoutStyle == "Modern") {
-            bottomNav.visibility = View.GONE
-            btnDrawer.visibility = View.VISIBLE
+        if (isPinOrBookmark) {
             binding.appBarMain.toolbar.navigationIcon = null
             supportActionBar?.setDisplayHomeAsUpEnabled(false)
         } else {
-            // Classic Layout (Default)
-            bottomNav.visibility = View.VISIBLE
-            btnDrawer.visibility = View.GONE
-            if (isPinOrBookmark) {
-                binding.appBarMain.toolbar.navigationIcon = null
-                supportActionBar?.setDisplayHomeAsUpEnabled(false)
-            } else {
-                if (navController != null) {
-                    setupActionBarWithNavController(navController, appBarConfiguration)
-                }
-                supportActionBar?.setDisplayHomeAsUpEnabled(true)
+            if (navController != null) {
+                setupActionBarWithNavController(navController, appBarConfiguration)
             }
+            supportActionBar?.setDisplayHomeAsUpEnabled(true)
         }
     }
 
@@ -956,7 +965,7 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
             val outdatedVersions = mutableListOf<String>()
             var updateMessage: String? = null
 
-            val versionsToCheck = listOf("MzOV", "KJV", "NIV", "MzCL")
+            val versionsToCheck = listOf("MzOV", "KJV", "NIV", "MzCL", "BanglaOV")
 
             versionsToCheck.forEach { vCode ->
                 val isDownloaded = prefs.getBoolean("imported_$vCode", false)
@@ -1440,6 +1449,7 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
             "burmesebible" -> "MYJ"
             "niv" -> "NIV"
             "mzcl" -> "MzCL"
+            "bangla", "banglaov" -> "BanglaOV"
             else -> v.uppercase()
         }
     }
@@ -1452,6 +1462,7 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         "burmesebible" -> "Myanmar Judson (MYJ)"
         "niv" -> "New International Version (NIV)"
         "mzcl" -> "Mizo Common Language (MzCL)"
+        "bangla", "banglaov" -> "Bangla Old Version (BanglaOV)"
         else -> v.uppercase()
     }
 
@@ -1489,11 +1500,19 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
                 do {
                     val raw = if (tIdx != -1) cursor.getString(tIdx) ?: "" else ""
                     val norm = normalizeMizo(raw)
+                    val rawBook = if (bIdx != -1) cursor.getString(bIdx) ?: "" else ""
+                    val bookName = when (rawBook.trim()) {
+                        "Josua" -> "Josua-I"
+                        "Ṭahhla" -> "Ṭah hla"
+                        "Habakkuka" -> "Habakuka"
+                        "Zecharia" -> "Zakaria"
+                        else -> rawBook.trim()
+                    }
                     allVerses.add(
                         BibleVerse(
                             null,
                             versionCode,
-                            if (bIdx != -1) cursor.getString(bIdx) ?: "" else "",
+                            bookName,
                             if (cIdx != -1) cursor.getInt(cIdx) else 0,
                             if (vIdx != -1) cursor.getString(vIdx) else null,
                             raw,
@@ -1728,7 +1747,6 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
             binding.appBarMain.btnNextToolbar,
             binding.appBarMain.btnToolbarSearch,
             binding.appBarMain.btnToolbarFont,
-            binding.appBarMain.btnBottomDrawer,
             binding.appBarMain.btnPrevChapter,
             binding.appBarMain.btnNextChapter,
             binding.appBarMain.btnNavBack,
@@ -1747,35 +1765,105 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
             binding.appBarMain.navHistoryContainer.setCardBackgroundColor(cardColor)
         }
 
-        binding.appBarMain.bottomNavView.setBackgroundColor(toolbarColor)
-        binding.navView.setBackgroundColor(toolbarColor)
+        applyDrawerCornersAndBackground(toolbarColor)
+
+        // Styling for Navigation Drawer (Side Menu):
+        // User request:
+        // "ka thaibial box hi color a tak kuk bik thin a icon hi, a dang hi tak kuk ve zawk se,
+        // fonts color leh icon hi ka thai bial color ang hian tak kuk se,
+        // feia ka kawh tir lai khi color a ngai ve lo sir, member icon pawh khi color change a ngai ve lo a."
+        //
+        // 1. Text color (fonts color) in drawer should be solid/deep (tak kuk), fully opaque without fading.
+        val isDrawerDark = ThemeHelper.isColorDark(toolbarColor)
+        val navTextColor = if (isDrawerDark) Color.WHITE else Color.BLACK
+
+        val navTextStateList = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_checked),
+                intArrayOf(-android.R.attr.state_checked)
+            ),
+            intArrayOf(navTextColor, navTextColor)
+        )
+        binding.navView.itemTextColor = navTextStateList
+
+        // 2. Tint drawer icons solid black (tak kuk),
+        // EXCEPT the member icon ("member icon pawh khi color change a ngai ve lo a").
+        val blackIconColor = if (isDrawerDark) Color.WHITE else Color.BLACK
+        val blackTintList = ColorStateList.valueOf(blackIconColor)
+
+        val itemsToTintBlack = listOf(
+            R.id.nav_home,
+            R.id.nav_quiz,
+            R.id.split,
+            R.id.nav_pin,
+            R.id.nav_bookmark,
+            R.id.feedback_mail,
+            R.id.nav_settings,
+            R.id.about
+        )
+
+        for (itemId in itemsToTintBlack) {
+            val item = binding.navView.menu.findItem(itemId)
+            item?.icon?.let { icon ->
+                val wrapped = androidx.core.graphics.drawable.DrawableCompat.wrap(icon.mutate())
+                androidx.core.graphics.drawable.DrawableCompat.setTintList(wrapped, blackTintList)
+                item.icon = wrapped
+            }
+        }
+
+        // 3. Keep Member icon in its distinct original full-color crown (Gold, Ruby, Jewels):
+        val memberItem = binding.navView.menu.findItem(R.id.nav_premium)
+        memberItem?.icon?.let { icon ->
+            val wrapped = androidx.core.graphics.drawable.DrawableCompat.wrap(icon.mutate())
+            androidx.core.graphics.drawable.DrawableCompat.setTintList(wrapped, null)
+            memberItem.icon = wrapped
+        }
+
+        binding.navView.itemIconTintList = null
 
         val primaryColor = ThemeHelper.getPrimaryColor(this)
-        val states = arrayOf(
-            intArrayOf(android.R.attr.state_checked),
-            intArrayOf(-android.R.attr.state_checked)
-        )
-        val iconChecked = effectiveIconColor ?: primaryColor
-        val iconColors = intArrayOf(
-            iconChecked,
-            ColorUtils.setAlphaComponent(tbTextColor, 160)
-        )
-        val iconStateList = ColorStateList(states, iconColors)
-        binding.appBarMain.bottomNavView.itemIconTintList = iconStateList
-        binding.navView.itemIconTintList = iconStateList
 
-        val textChecked = effectiveFontColor ?: primaryColor
-        val textColors = intArrayOf(
-            textChecked,
-            ColorUtils.setAlphaComponent(tbTextColor, 160)
-        )
-        val textStateList = ColorStateList(states, textColors)
-        binding.appBarMain.bottomNavView.itemTextColor = textStateList
-        binding.navView.itemTextColor = textStateList
+        // 4. Highlight for selected drawer item (matches theme card color)
+        val navItemSelectColor = cardColor ?: if (isDrawerDark) Color.parseColor("#2E2F45") else ColorUtils.setAlphaComponent(primaryColor, 40)
+        val checkedDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 24f * resources.displayMetrics.density
+            setColor(navItemSelectColor)
+        }
+        val defaultDrawable = ColorDrawable(Color.TRANSPARENT)
+        val stateListDrawable = StateListDrawable().apply {
+            addState(intArrayOf(android.R.attr.state_checked), checkedDrawable)
+            addState(intArrayOf(), defaultDrawable)
+        }
+        binding.navView.itemBackground = stateListDrawable
 
+        // 5. Parallel switch tint in drawer
+        val splitActionView = binding.navView.menu.findItem(R.id.split)?.actionView as? com.google.android.material.materialswitch.MaterialSwitch
+        splitActionView?.let { s ->
+            val thumbChecked = effectiveIconColor ?: primaryColor
+            s.thumbTintList = ColorStateList(
+                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf(-android.R.attr.state_checked)),
+                intArrayOf(thumbChecked, if (isDrawerDark) Color.parseColor("#888888") else Color.parseColor("#B0B0B0"))
+            )
+            s.trackTintList = ColorStateList(
+                arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf(-android.R.attr.state_checked)),
+                intArrayOf(ColorUtils.setAlphaComponent(thumbChecked, 120), if (isDrawerDark) Color.parseColor("#444444") else Color.parseColor("#D0D0D0"))
+            )
+        }
+
+        // 6. Header title/subtitle: change color together with Bible/Bible Quiz menu items (navTextColor).
+        // Header background matches Drawer background (toolbarColor) seamlessly.
+        // GOLD MEMBER text at the top always stays white.
         if (binding.navView.headerCount > 0) {
             val headerView = binding.navView.getHeaderView(0)
-            ThemeHelper.applyColorsRecursively(headerView, cardColor, effectiveFontColor, effectiveIconColor)
+            val headerTitle = headerView.findViewById<TextView>(R.id.text_header_title)
+            val headerSubtitle = headerView.findViewById<TextView>(R.id.text_header_subtitle)
+            headerTitle?.setTextColor(navTextColor)
+            headerSubtitle?.setTextColor(navTextColor)
+
+            headerView.findViewById<TextView>(R.id.text_gold_title)?.setTextColor(Color.WHITE)
+            headerView.findViewById<TextView>(R.id.text_silver_title)?.setTextColor(Color.WHITE)
+            headerView.findViewById<TextView>(R.id.text_premium_title)?.setTextColor(Color.WHITE)
         }
 
         ThemeHelper.applyColorsRecursively(binding.root, cardColor, effectiveFontColor, effectiveIconColor)
@@ -1788,6 +1876,10 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
                     fragment.applyTheme()
                 } else if (fragment is com.zoliana.khampat.mizobible.ui.transform.TransformFragment) {
                     fragment.applyTheme()
+                } else if (fragment is com.zoliana.khampat.mizobible.ui.transform.FontSettingsDialog ||
+                    fragment is com.zoliana.khampat.mizobible.ui.settings.ThemeSettingsDialog ||
+                    fragment is com.zoliana.khampat.mizobible.ui.transform.BibleVersionDialog) {
+                    // Dialogs manage their own internal theme and preview styling
                 } else {
                     fragment.view?.let { v ->
                         ThemeHelper.applyThemeToView(this, v)
@@ -1797,6 +1889,56 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
             }
         }
         applyToFm(supportFragmentManager)
+    }
+
+    private fun applyDrawerCornersAndBackground(toolbarColor: Int) {
+        val r = 28f * resources.displayMetrics.density
+
+        val navShapeModel = ShapeAppearanceModel.builder()
+            .setTopLeftCorner(CornerFamily.ROUNDED, 0f)
+            .setBottomLeftCorner(CornerFamily.ROUNDED, 0f)
+            .setTopRightCorner(CornerFamily.ROUNDED, r)
+            .setBottomRightCorner(CornerFamily.ROUNDED, r)
+            .build()
+
+        val navBg = MaterialShapeDrawable(navShapeModel).apply {
+            fillColor = ColorStateList.valueOf(toolbarColor)
+            elevation = binding.navView.elevation
+        }
+        binding.navView.background = navBg
+
+        binding.navView.outlineProvider = object : ViewOutlineProvider() {
+            override fun getOutline(view: View, outline: Outline) {
+                if (view.width > 0 && view.height > 0) {
+                    outline.setRoundRect(-r.toInt(), 0, view.width, view.height, r)
+                }
+            }
+        }
+        binding.navView.clipToOutline = true
+
+        if (binding.navView.headerCount > 0) {
+            val headerView = binding.navView.getHeaderView(0)
+            val headerShapeModel = ShapeAppearanceModel.builder()
+                .setTopLeftCorner(CornerFamily.ROUNDED, 0f)
+                .setBottomLeftCorner(CornerFamily.ROUNDED, 0f)
+                .setTopRightCorner(CornerFamily.ROUNDED, r)
+                .setBottomRightCorner(CornerFamily.ROUNDED, 0f)
+                .build()
+
+            val headerBg = MaterialShapeDrawable(headerShapeModel).apply {
+                fillColor = ColorStateList.valueOf(toolbarColor)
+            }
+            headerView.background = headerBg
+
+            headerView.outlineProvider = object : ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: Outline) {
+                    if (view.width > 0 && view.height > 0) {
+                        outline.setRoundRect(-r.toInt(), 0, view.width, view.height + r.toInt(), r)
+                    }
+                }
+            }
+            headerView.clipToOutline = true
+        }
     }
 
     private fun applyCustomThemeBackground() {
@@ -1811,6 +1953,10 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
                     f.applyTheme()
                 } else if (f is com.zoliana.khampat.mizobible.ui.transform.TransformFragment) {
                     f.applyTheme()
+                } else if (f is com.zoliana.khampat.mizobible.ui.transform.FontSettingsDialog ||
+                    f is com.zoliana.khampat.mizobible.ui.settings.ThemeSettingsDialog ||
+                    f is com.zoliana.khampat.mizobible.ui.transform.BibleVersionDialog) {
+                    // Skip dialog fragments
                 } else {
                     ThemeHelper.applyThemeToView(this@MainActivity, v)
                 }
@@ -1824,6 +1970,10 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
                     f.applyTheme()
                 } else if (f is com.zoliana.khampat.mizobible.ui.transform.TransformFragment) {
                     f.applyTheme()
+                } else if (f is com.zoliana.khampat.mizobible.ui.transform.FontSettingsDialog ||
+                    f is com.zoliana.khampat.mizobible.ui.settings.ThemeSettingsDialog ||
+                    f is com.zoliana.khampat.mizobible.ui.transform.BibleVersionDialog) {
+                    // Skip dialog fragments
                 } else {
                     f.view?.let { v ->
                         ThemeHelper.applyThemeToView(this@MainActivity, v)

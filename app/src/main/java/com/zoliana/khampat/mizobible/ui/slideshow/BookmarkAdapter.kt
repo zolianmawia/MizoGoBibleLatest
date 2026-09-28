@@ -12,7 +12,9 @@ import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.core.graphics.ColorUtils
 import androidx.core.widget.CompoundButtonCompat
+import androidx.core.widget.TextViewCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
@@ -224,15 +226,33 @@ class BookmarkAdapter(
             if (hasTitle) {
                 binding.textChildTitle.visibility = View.VISIBLE
                 binding.textChildTitle.text = item.title
+                val cardColor = ThemeHelper.getEffectiveCardColor(context)
+                val isSepia = ThemeHelper.getCurrentThemeMode(context) == ThemeHelper.ThemeMode.SEPIA
+                val pillColor = if (isDark) {
+                    cardColor ?: Color.parseColor("#2E2F45")
+                } else if (isSepia) {
+                    Color.parseColor("#E5D9C0")
+                } else {
+                    cardColor ?: ColorUtils.setAlphaComponent(appPrimary, 25)
+                }
+                val strokeColor = if (isDark) {
+                    Color.parseColor("#35FFFFFF")
+                } else if (isSepia) {
+                    Color.parseColor("#DACFB9")
+                } else {
+                    ColorUtils.setAlphaComponent(appPrimary, 60)
+                }
                 val pillBg = GradientDrawable().apply {
                     shape = GradientDrawable.RECTANGLE
                     cornerRadius = 12f * density
-                    val pillColor = if (isDark) Color.parseColor("#2E2F45") else Color.parseColor("#E5D9C0")
                     setColor(pillColor)
-                    setStroke((1 * density).toInt(), if (isDark) Color.parseColor("#44FFFFFF") else Color.parseColor("#DACFB9"))
+                    setStroke((1 * density).toInt(), strokeColor)
                 }
                 binding.textChildTitle.background = pillBg
-                binding.textChildTitle.setTextColor(if (isDark) Color.parseColor("#D3D4F2") else Color.parseColor("#201A12"))
+                val fontColor = ThemeHelper.getEffectiveFontColor(context)
+                val titleTextColor = ThemeHelper.getContrastingTextColor(pillColor, fontColor ?: appPrimary)
+                binding.textChildTitle.setTextColor(titleTextColor)
+                TextViewCompat.setCompoundDrawableTintList(binding.textChildTitle, ColorStateList.valueOf(titleTextColor))
                 binding.textChildTitle.setOnClickListener {
                     onEditBookmarkClick(item)
                 }

@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
 import android.os.Bundle
 import android.view.DragEvent
@@ -107,6 +108,13 @@ class TransformFragment : Fragment() {
         updateBiblePaddings()
         showBottomBarAndResetTimer()
         applyTheme()
+
+        binding?.recyclerviewBible?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            updateBiblePaddings()
+        }
+        binding?.recyclerviewBibleSplit?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            updateBiblePaddings()
+        }
 
         bibleAdapter = BibleAdapter { verse, anchor -> handleVerseSelection(verse, anchor, false) }
         binding?.recyclerviewBible?.adapter = bibleAdapter
@@ -577,28 +585,44 @@ class TransformFragment : Fragment() {
         val right = rv1.paddingRight
         val top = rv1.paddingTop
 
-        val mainActivity = activity as? MainActivity
-        val prefs = mainActivity?.getSharedPreferences("bible_prefs", Context.MODE_PRIVATE)
-        val layoutStyle = prefs?.getString("app_layout_style", "Classic") ?: "Classic"
+        val bottomNavPadding = (76 * density).toInt()
 
-        // In Modern mode, floating bar is ~54dp + 12dp margin.
-        // In Classic mode, BottomNav is 56dp + card.
-        // With clipToPadding = false, this padding ONLY takes effect when reaching the very end
-        // of the chapter, allowing the last verse to scroll up above the bottom controls.
-        val bottomNavPadding = if (layoutStyle == "Modern") {
-            (76 * density).toInt()
+        val screenHeight = resources.displayMetrics.heightPixels
+        // User request: Bible verse hi phone screen hnuailam scroll a nih in,
+        // phone screen zatve hnuailam thui thei angber scroll theih nise,
+        // a chhan chu chapter leh verse thlakna a in hide 3 sec nghah zel a ngaih vang a chhiar mai theih loh fix nan.
+        // Provide generous bottom padding (approx 60% of screen height / container height).
+        // Since clipToPadding is false, verses render across the entire screen during reading,
+        // but when scrolling towards the bottom/end of the chapter, the verses can be scrolled all the
+        // way up past the bottom half of the phone screen, comfortably clear of the bottom chapter/verse switcher.
+        val availableHeight = if (rv1.height > 0) rv1.height else screenHeight
+        val halfScreenScrollPadding = maxOf((availableHeight * 0.60f).toInt(), (screenHeight * 0.55f).toInt(), (400 * density).toInt())
+
+        val rv1Bottom = if (isSplit && !isVertical) {
+            val topPaneHeight = if (rv1.height > 0) rv1.height else screenHeight / 2
+            maxOf((topPaneHeight * 0.55f).toInt(), (200 * density).toInt())
         } else {
-            (100 * density).toInt()
+            halfScreenScrollPadding
         }
 
-        val rv1Bottom = if (isSplit && !isVertical) (8 * density).toInt() else bottomNavPadding
-        rv1.setPadding(left, top, right, rv1Bottom)
+        if (rv1.paddingBottom != rv1Bottom || rv1.paddingTop != top) {
+            rv1.setPadding(left, top, right, rv1Bottom)
+        }
 
         val left2 = rv2.paddingLeft
         val right2 = rv2.paddingRight
         val rv2Top = if (isSplit && !isVertical) (8 * density).toInt() else 0
 
-        rv2.setPadding(left2, rv2Top, right2, bottomNavPadding)
+        val rv2Bottom = if (isSplit && !isVertical) {
+            val bottomPaneHeight = if (rv2.height > 0) rv2.height else screenHeight / 2
+            maxOf((bottomPaneHeight * 0.55f).toInt(), (200 * density).toInt()) + bottomNavPadding
+        } else {
+            halfScreenScrollPadding
+        }
+
+        if (rv2.paddingBottom != rv2Bottom || rv2.paddingTop != rv2Top) {
+            rv2.setPadding(left2, rv2Top, right2, rv2Bottom)
+        }
     }
 
     private fun setupSplitResizeLogic() {
@@ -799,6 +823,45 @@ class TransformFragment : Fragment() {
 
         val dialog = BottomSheetDialog(requireContext(), R.style.Theme_MizoGoBible_BottomSheet)
         dialog.setContentView(sheetBinding.root)
+
+        val ctx = requireContext()
+        val toolbarColor = ThemeHelper.getEffectiveToolbarColor(ctx)
+        val cardColor = ThemeHelper.getEffectiveCardColor(ctx)
+        val fontColor = ThemeHelper.getEffectiveFontColor(ctx)
+        val primaryColor = ThemeHelper.getPrimaryColor(ctx)
+        val isDark = ThemeHelper.isColorDark(toolbarColor)
+        val textColor = ThemeHelper.getContrastingTextColor(toolbarColor, fontColor)
+
+        val r = 24f * resources.displayMetrics.density
+        val sheetBg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadii = floatArrayOf(r, r, r, r, 0f, 0f, 0f, 0f)
+            setColor(toolbarColor)
+        }
+        sheetBinding.root.background = sheetBg
+
+        if (cardColor != null) {
+            sheetBinding.cardVersePreview.setCardBackgroundColor(cardColor)
+        }
+        sheetBinding.textSheetReference.setTextColor(primaryColor)
+        sheetBinding.textSheetContent.setTextColor(textColor)
+        sheetBinding.textPinLabel.setTextColor(textColor)
+
+        sheetBinding.btnSheetMinus.setColorFilter(primaryColor)
+        sheetBinding.btnSheetPlus.setColorFilter(primaryColor)
+        sheetBinding.btnOpenPins.setColorFilter(primaryColor)
+
+        sheetBinding.btnBottomCopy.setTextColor(textColor)
+        sheetBinding.btnBottomCopy.iconTint = ColorStateList.valueOf(textColor)
+        sheetBinding.btnBottomCopy.strokeColor = ColorStateList.valueOf(if (isDark) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000"))
+
+        sheetBinding.btnBottomShare.setTextColor(textColor)
+        sheetBinding.btnBottomShare.iconTint = ColorStateList.valueOf(textColor)
+        sheetBinding.btnBottomShare.strokeColor = ColorStateList.valueOf(if (isDark) Color.parseColor("#40FFFFFF") else Color.parseColor("#40000000"))
+
+        sheetBinding.btnBottomBookmark.backgroundTintList = ColorStateList.valueOf(primaryColor)
+        sheetBinding.btnBottomBookmark.setTextColor(Color.WHITE)
+        sheetBinding.btnBottomBookmark.iconTint = ColorStateList.valueOf(Color.WHITE)
 
         dialog.setOnShowListener {
             val bottomSheet =
@@ -1034,11 +1097,12 @@ class TransformFragment : Fragment() {
         if (selectedVersesList.isEmpty()) return ""
         selectedVersesList.sortBy { it.id }
 
+        val hideVerseNumbers = viewModel.copyHideVerseNumbers.value
         val textContent = StringBuilder("\"")
         selectedVersesList.forEachIndexed { index, it ->
             val vNum = it.verse ?: "0"
             val text = it.text?.trim() ?: ""
-            if (vNum != "0" && vNum != "1") textContent.append(vNum)
+            if (!hideVerseNumbers && vNum != "0" && vNum != "1") textContent.append(vNum)
             textContent.append(text)
             if (index < selectedVersesList.size - 1) textContent.append(" ")
         }
@@ -1130,6 +1194,7 @@ class TransformFragment : Fragment() {
             }
             dialog.dismiss()
         }
+        ThemeHelper.applyThemeToView(requireContext(), noteBinding.root)
         dialog.show()
         (activity as? MainActivity)?.limitDialogWidth(dialog)
     }
@@ -1238,6 +1303,7 @@ class TransformFragment : Fragment() {
             }
             dialog.dismiss()
         }
+        ThemeHelper.applyThemeToView(requireContext(), bookmarkBinding.root)
         dialog.show()
         (activity as? MainActivity)?.limitDialogWidth(dialog)
     }

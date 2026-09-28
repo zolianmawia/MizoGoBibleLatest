@@ -20,8 +20,11 @@
         android:layout_width="280dp"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:fitsSystemWindows="true" 
+        android:fitsSystemWindows="false"
+        app:insetForeground="@android:color/transparent"
         app:headerLayout="@layout/nav_header_main"
-        app:menu="@menu/navigation_drawer" />
+        app:menu="@menu/navigation_drawer"
+        app:subheaderTextAppearance="@style/NavDrawerSubheader"
+        app:itemTextAppearance="@style/NavDrawerItemText" />
 
 </androidx.drawerlayout.widget.DrawerLayout>

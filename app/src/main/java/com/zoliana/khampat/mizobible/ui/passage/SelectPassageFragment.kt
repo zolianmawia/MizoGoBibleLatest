@@ -1,14 +1,18 @@
 package com.zoliana.khampat.mizobible.ui.passage
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.appcompat.widget.SearchView
+import androidx.core.graphics.ColorUtils
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import com.google.android.material.tabs.TabLayoutMediator
 import com.zoliana.khampat.mizobible.databinding.FragmentSelectPassageBinding
+import com.zoliana.khampat.mizobible.utils.ThemeHelper
 
 class SelectPassageFragment : Fragment() {
 
@@ -62,6 +66,43 @@ class SelectPassageFragment : Fragment() {
                 return true
             }
         })
+
+        applyTheme()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyTheme()
+    }
+
+    fun applyTheme() {
+        val ctx = context ?: return
+        val toolbarColor = ThemeHelper.getEffectiveToolbarColor(ctx)
+        val fontColor = ThemeHelper.getEffectiveFontColor(ctx)
+        val iconColor = ThemeHelper.getEffectiveIconColor(ctx)
+        val primaryColor = ThemeHelper.getPrimaryColor(ctx)
+        val tbTextColor = ThemeHelper.getContrastingTextColor(toolbarColor, fontColor)
+        val tbIconColor = iconColor?.let { ThemeHelper.getContrastingTextColor(toolbarColor, it) } ?: tbTextColor
+
+        binding.root.setBackgroundColor(toolbarColor)
+        binding.toolbar.setBackgroundColor(toolbarColor)
+        binding.toolbar.setTitleTextColor(tbTextColor)
+        binding.toolbar.navigationIcon?.setTint(tbIconColor)
+
+        binding.tabLayout.setBackgroundColor(toolbarColor)
+        binding.tabLayout.setSelectedTabIndicatorColor(primaryColor)
+        binding.tabLayout.setTabTextColors(
+            ColorUtils.setAlphaComponent(tbTextColor, 160),
+            primaryColor
+        )
+
+        val searchPlate = binding.searchView.findViewById<android.widget.EditText>(androidx.appcompat.R.id.search_src_text)
+        searchPlate?.setTextColor(tbTextColor)
+        searchPlate?.setHintTextColor(ColorUtils.setAlphaComponent(tbTextColor, 140))
+        val searchClose = binding.searchView.findViewById<android.widget.ImageView>(androidx.appcompat.R.id.search_close_btn)
+        searchClose?.setColorFilter(tbIconColor)
+        val searchMag = binding.searchView.findViewById<android.widget.ImageView>(androidx.appcompat.R.id.search_mag_icon)
+        searchMag?.setColorFilter(tbIconColor)
     }
 
     override fun onDestroyView() {

@@ -6,6 +6,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
 import android.view.View
+import androidx.core.graphics.ColorUtils
 import com.zoliana.khampat.mizobible.utils.ThemeHelper
 
 class TreeConnectorView @JvmOverloads constructor(
@@ -111,9 +112,14 @@ class TreeConnectorView @JvmOverloads constructor(
                 rootDotColor = primaryColor
                 childDotStrokePaint.color = Color.parseColor("#9E8E6A")
             } else {
-                treeLineColor = Color.parseColor("#DAC89C")
+                val cardColor = ThemeHelper.getEffectiveCardColor(context)
+                treeLineColor = if (cardColor != null && !ThemeHelper.isColorDark(cardColor)) {
+                    ColorUtils.blendARGB(cardColor, primaryColor, 0.40f)
+                } else {
+                    ColorUtils.setAlphaComponent(primaryColor, 120)
+                }
                 rootDotColor = primaryColor
-                childDotStrokePaint.color = Color.parseColor("#9E8E6A")
+                childDotStrokePaint.color = ColorUtils.setAlphaComponent(primaryColor, 120)
             }
         } catch (_: Exception) {}
         invalidate()

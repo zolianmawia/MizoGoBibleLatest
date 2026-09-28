@@ -36,7 +36,7 @@ class UpdateWorker(context: Context, params: WorkerParameters) : CoroutineWorker
                 rootMap
             } else rootMap
 
-            val versionsToCheck = listOf("MzOV", "KJV", "MzCL", "NIV")
+            val versionsToCheck = listOf("MzOV", "KJV", "MzCL", "NIV", "BanglaOV")
 
             versionsToCheck.forEach { vCode ->
                 val vData = remoteVersions?.get(vCode) as? Map<String, Any> ?: return@forEach

@@ -173,4 +173,17 @@
         <item name="colorOnSurface">#E0E0E0</item>
         <item name="colorSecondaryContainer">#1C1C1C</item>
     </style>
+
+    <!-- Navigation Drawer styling for bold, solid (tak kuk) text -->
+    <style name="NavDrawerSubheader" parent="TextAppearance.Material3.TitleSmall">
+        <item name="android:textColor">@color/bible_verse_text</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <style name="NavDrawerItemText" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textColor">@color/bible_verse_text</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">15sp</item>
+    </style>
 </resources>

@@ -1,12 +1,18 @@
 package com.zoliana.khampat.mizobible.ui.transform
 
+import android.content.res.ColorStateList
+import android.graphics.Color
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
+import androidx.core.widget.CompoundButtonCompat
+import androidx.core.widget.ImageViewCompat
 import androidx.recyclerview.widget.RecyclerView
 import com.zoliana.khampat.mizobible.R
 import com.zoliana.khampat.mizobible.databinding.ItemBibleVersionBinding
+import com.zoliana.khampat.mizobible.utils.ThemeHelper
 
 data class BibleVersionItem(
     val title: String,
@@ -53,6 +59,34 @@ class BibleVersionAdapter(
 
     inner class ViewHolder(private val binding: ItemBibleVersionBinding) : RecyclerView.ViewHolder(binding.root) {
         fun bind(item: BibleVersionItem) {
+            val context = binding.root.context
+            val bgColor = ThemeHelper.getEffectiveBackgroundColor(context)
+            val isDark = ThemeHelper.isColorDark(bgColor)
+            val cardColor = ThemeHelper.getEffectiveCardColor(context) ?: if (isDark) Color.parseColor("#2E2F45") else Color.parseColor("#F5F7FA")
+            val primaryColor = ThemeHelper.APP_COLORS.find {
+                it.id.equals(ThemeHelper.getSelectedAppColor(context), ignoreCase = true)
+            }?.colorInt ?: ContextCompat.getColor(context, R.color.bible_blue)
+            val fontColor = ThemeHelper.getEffectiveFontColor(context)
+            val iconColor = ThemeHelper.getEffectiveIconColor(context) ?: primaryColor
+
+            binding.root.setCardBackgroundColor(cardColor)
+            binding.root.strokeColor = if (isDark) Color.parseColor("#30FFFFFF") else ColorUtils.setAlphaComponent(primaryColor, 45)
+
+            ImageViewCompat.setImageTintList(binding.imgVersionIcon, ColorStateList.valueOf(iconColor))
+
+            val titleColor = ThemeHelper.getContrastingTextColor(cardColor, fontColor)
+            binding.textVersionName.setTextColor(titleColor)
+            val statusColor = ColorUtils.setAlphaComponent(titleColor, 180)
+            binding.textVersionStatus.setTextColor(statusColor)
+
+            val btnBg = ColorUtils.setAlphaComponent(primaryColor, if (isDark) 50 else 30)
+            binding.btnAction.backgroundTintList = ColorStateList.valueOf(btnBg)
+            binding.btnAction.setTextColor(primaryColor)
+            binding.btnAction.strokeColor = ColorStateList.valueOf(ColorUtils.setAlphaComponent(primaryColor, 70))
+            binding.btnAction.strokeWidth = (1 * context.resources.displayMetrics.density).toInt()
+
+            CompoundButtonCompat.setButtonTintList(binding.checkboxDelete, ColorStateList.valueOf(primaryColor))
+
             binding.textVersionName.text = item.title
             
             val hasUpdate = item.isDownloaded && item.remoteVersion > item.localVersion

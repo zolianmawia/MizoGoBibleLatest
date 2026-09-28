@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/nav_header_root"
     android:layout_width="match_parent"
-    android:layout_height="176dp">
+    android:layout_height="200dp">
 
     <!-- Header Background Image -->
     <ImageView
@@ -10,12 +11,6 @@
         android:layout_height="match_parent"
         android:scaleType="centerCrop"
         android:src="@drawable/header" />
-
-    <!-- Dim overlay for readability -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#40000000" />
 
     <!-- Bottom Content Group -->
     <LinearLayout
@@ -47,6 +42,7 @@
                 android:orientation="vertical">
 
                 <TextView
+                    android:id="@+id/text_premium_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="ACTIVATED PREMIUM"
@@ -86,6 +82,7 @@
                 android:orientation="vertical">
 
                 <TextView
+                    android:id="@+id/text_silver_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="SILVER MEMBER"
@@ -117,6 +114,7 @@
                 android:orientation="vertical">
 
                 <TextView
+                    android:id="@+id/text_gold_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="GOLD MEMBER"
@@ -131,15 +129,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="@string/nav_header_title"
-            android:textColor="@android:color/white"
-            android:textSize="16sp" />
+            android:textSize="16sp"
+            android:textStyle="bold" />
 
         <TextView
             android:id="@+id/text_header_subtitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/nav_header_subtitle"
-            android:textColor="@android:color/white"
             android:textSize="12sp"
             android:textStyle="bold|italic" />
     </LinearLayout>

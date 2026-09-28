@@ -2,12 +2,14 @@ package com.zoliana.khampat.mizobible.ui.transform
 
 import android.app.Dialog
 import android.content.Context
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
@@ -19,7 +21,9 @@ import com.google.android.material.bottomsheet.BottomSheetDialog
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.zoliana.khampat.mizobible.MainActivity
+import com.zoliana.khampat.mizobible.R
 import com.zoliana.khampat.mizobible.databinding.DialogBibleVersionsBinding
+import com.zoliana.khampat.mizobible.utils.ThemeHelper
 import kotlinx.coroutines.launch
 
 class BibleVersionDialog : BottomSheetDialogFragment() {
@@ -36,7 +40,8 @@ class BibleVersionDialog : BottomSheetDialogFragment() {
         Triple("New International Version (NIV)", "NIV", "1bnDLmjP9EUJBYn1yTrGHvNb_QsAIovgo"),
         Triple("HINDI (HIN)", "HIN", "1Z0faONDmNJaiF8sa3XDehkhETn3Be1Zz"),
         Triple("Myanmar Judson (MYJ)", "MYJ", "1VI9J7hpS-GykLmqQZB05tL2Aks9jSz5K"),
-        Triple("GREEK (GRK)", "GREEK (GRK)", "1m5Sye8s0DSqXdORBHnR2T8Jl8wp_vHa_")
+        Triple("GREEK (GRK)", "GREEK (GRK)", "1m5Sye8s0DSqXdORBHnR2T8Jl8wp_vHa_"),
+        Triple("Bangla Old Version (BanglaOV)", "BanglaOV", "13_zx4XLb9YeBDNKzYSdee3VjpmsELAlQ")
     )
 
     override fun onCreateView(
@@ -79,6 +84,30 @@ class BibleVersionDialog : BottomSheetDialogFragment() {
             v.updatePadding(bottom = systemBars.bottom)
             insets
         }
+
+        val ctx = requireContext()
+        val bgColor = ThemeHelper.getEffectiveToolbarColor(ctx)
+        val primaryColor = ThemeHelper.APP_COLORS.find {
+            it.id.equals(ThemeHelper.getSelectedAppColor(ctx), ignoreCase = true)
+        }?.colorInt ?: ContextCompat.getColor(ctx, R.color.bible_blue)
+        val fontColor = ThemeHelper.getEffectiveFontColor(ctx)
+        val iconColor = ThemeHelper.getEffectiveIconColor(ctx) ?: primaryColor
+
+        val density = resources.displayMetrics.density
+        val dialogBg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadii = floatArrayOf(
+                24f * density, 24f * density,
+                24f * density, 24f * density,
+                0f, 0f, 0f, 0f
+            )
+            setColor(bgColor)
+        }
+        view.background = dialogBg
+
+        val titleColor = ThemeHelper.getContrastingTextColor(bgColor, fontColor ?: primaryColor)
+        binding.textVersionsTitle.setTextColor(titleColor)
+        binding.btnDeleteSelected.setColorFilter(iconColor)
 
         setupRecyclerView()
         loadVersions()

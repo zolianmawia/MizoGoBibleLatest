@@ -10,6 +10,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -76,9 +77,14 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        val context = requireContext()
+        val activeFontColor = ThemeHelper.getFontColor(context)
+        if (viewModel.fontSettings.value.fontColor != activeFontColor) {
+            viewModel.updateFontColor(activeFontColor)
+        }
         val currentSettings = viewModel.fontSettings.value
         setupFontList(currentSettings.fontFamily)
-        setupFontColorList(currentSettings.fontColor)
+        setupFontColorList(activeFontColor)
 
         // Crash prevention: Slider value hi a step nena inmil turin snapToStep kan hmang vek ang
         binding.sliderFontSize.value = snapToStep(currentSettings.fontSize, binding.sliderFontSize)
@@ -121,20 +127,34 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
         binding.btnItalic.setOnClickListener { updateSettings { it.copy(isItalic = !it.isItalic) } }
 
         binding.btnFontColorPicker?.setOnClickListener {
+            val isDark = ThemeHelper.isCurrentThemeDark(requireContext())
             val currentHex = if (viewModel.fontSettings.value.fontColor.startsWith("#")) {
                 viewModel.fontSettings.value.fontColor
-            } else "#000000"
+            } else if (isDark) "#FFFFFF" else "#000000"
 
             ColorPickerDialog(
                 context = requireContext(),
                 initialColorHex = currentHex,
-                title = "Font Color Picker"
+                title = if (isDark) "Font Color (A var/eng lam)" else "Font Color (A fiah/thim lam)"
             ) { hex ->
+                val chosenColor = try { Color.parseColor(hex) } catch (_: Exception) { null }
+                if (chosenColor != null) {
+                    val isColorDark = ThemeHelper.isColorDark(chosenColor)
+                    if (isDark && isColorDark) {
+                        Toast.makeText(requireContext(), "Dark mode-ah chuan rawng eng/var lam chi chauh a fiah e", Toast.LENGTH_SHORT).show()
+                        return@ColorPickerDialog
+                    }
+                    if (!isDark && !isColorDark) {
+                        Toast.makeText(requireContext(), "Light mode-ah chuan rawng fiah/thim lam chi chauh hman theih a ni e", Toast.LENGTH_SHORT).show()
+                        return@ColorPickerDialog
+                    }
+                }
                 updateSettings { it.copy(fontColor = hex) }
                 setupFontColorList(hex)
             }.show()
         }
 
+        binding.btnDone.setTextColor(Color.WHITE)
         binding.btnDone.setOnClickListener { dismiss() }
     }
 
@@ -174,7 +194,17 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
     }
 
     private fun setupFontColorList(currentColor: String) {
-        val swatchItems = ThemeHelper.FONT_COLORS.map { option ->
+        val context = requireContext()
+        val isDark = ThemeHelper.isCurrentThemeDark(context)
+        val availableOptions = ThemeHelper.getAvailableFontColors(context)
+
+        binding.textFontColorSectionTitle?.text = if (isDark) {
+            "Font Color (Dark Mode - A var lam chi chauh)"
+        } else {
+            "Font Color (Light Mode - A fiah lam chi chauh)"
+        }
+
+        val swatchItems = availableOptions.map { option ->
             ColorSwatchAdapter.SwatchItem(
                 id = option.hex,
                 name = option.name,
@@ -189,6 +219,9 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
         binding.recyclerFontColors?.layoutManager =
             LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
         binding.recyclerFontColors?.adapter = adapter
+
+        val index = swatchItems.indexOfFirst { it.id.equals(currentColor, ignoreCase = true) }
+        if (index != -1) binding.recyclerFontColors?.scrollToPosition(index)
     }
 
     private fun updateSettings(update: (FontSettings) -> FontSettings) {
@@ -197,6 +230,7 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
         ThemeHelper.setFontColor(requireContext(), newSettings.fontColor)
         ThemeHelper.setCustomIconColor(requireContext(), newSettings.fontColor)
         (activity as? MainActivity)?.applyThemeColors()
+        binding.btnDone.setTextColor(Color.WHITE)
         updatePreview(newSettings)
         updateValueTexts(newSettings, viewModel.sidePadding.value)
     }
@@ -231,14 +265,17 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
         val mult = if (settings.lineHeight <= 1.05f) 1.28f else settings.lineHeight
         binding.textPreview.setLineSpacing((2 * density), mult)
 
+        val effectiveVerseBg = ThemeHelper.getEffectiveToolbarColor(requireContext())
+        val effectiveCardBg = ThemeHelper.getEffectiveCardColor(requireContext()) ?: effectiveVerseBg
+        binding.cardPreview?.setCardBackgroundColor(effectiveCardBg)
+
         val customColor = try {
             if (settings.fontColor.isNotBlank() && settings.fontColor != "default") {
                 Color.parseColor(settings.fontColor)
             } else null
         } catch (_: Exception) { null }
 
-        val effectiveVerseBg = ThemeHelper.getEffectiveToolbarColor(requireContext())
-        val finalTextColor = ThemeHelper.getContrastingTextColor(effectiveVerseBg, customColor)
+        val finalTextColor = ThemeHelper.getContrastingTextColor(effectiveCardBg, customColor)
         binding.textPreview.setTextColor(finalTextColor)
 
         val style = when {
