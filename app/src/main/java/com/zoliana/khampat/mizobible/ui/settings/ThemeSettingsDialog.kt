@@ -1,6 +1,7 @@
 package com.zoliana.khampat.mizobible.ui.settings
 
 import android.app.Dialog
+import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Color
 import android.os.Bundle
@@ -40,6 +41,8 @@ class ThemeSettingsDialog : BottomSheetDialogFragment() {
     private lateinit var presetAdapter: ThemePresetAdapter
     private var initialPreset: ThemeHelper.ThemePreset = ThemeHelper.ThemePreset.SYSTEM
     private var selectedPreset: ThemeHelper.ThemePreset = ThemeHelper.ThemePreset.SYSTEM
+    private var initialOpacity: Float = 0.0f
+    private var currentOpacity: Float = 0.0f
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -79,8 +82,11 @@ class ThemeSettingsDialog : BottomSheetDialogFragment() {
         val context = requireContext()
         initialPreset = ThemeHelper.getSelectedThemePreset(context)
         selectedPreset = initialPreset
+        initialOpacity = ThemeHelper.getThemeOpacity(context)
+        currentOpacity = initialOpacity
 
         setupThemePresetsRecycler()
+        setupOpacitySlider()
         setupActionButtons()
         updatePreview()
     }
@@ -101,30 +107,48 @@ class ThemeSettingsDialog : BottomSheetDialogFragment() {
         binding.recyclerThemePresets.adapter = presetAdapter
     }
 
+    private fun setupOpacitySlider() {
+        val sliderVal = (currentOpacity * 100f).coerceIn(0f, 100f)
+        val roundedVal = (Math.round(sliderVal / 5f) * 5f).coerceIn(0f, 100f)
+        try {
+            binding.sliderThemeOpacity.value = roundedVal
+        } catch (_: Exception) {
+            try { binding.sliderThemeOpacity.value = 0f } catch (_: Exception) {}
+        }
+        binding.textOpacityValue.text = "${roundedVal.toInt()}%"
+
+        binding.sliderThemeOpacity.addOnChangeListener { _, value, fromUser ->
+            if (fromUser) {
+                currentOpacity = (value / 100f).coerceIn(0f, 1f)
+                binding.textOpacityValue.text = "${value.toInt()}%"
+                updatePreview()
+            }
+        }
+    }
+
     private fun setupActionButtons() {
         binding.btnResetDefaults.setOnClickListener {
             selectedPreset = ThemeHelper.ThemePreset.SYSTEM
             presetAdapter.setSelected(ThemeHelper.ThemePreset.SYSTEM)
+            currentOpacity = 0.0f
+            try {
+                binding.sliderThemeOpacity.value = 0f
+            } catch (_: Exception) {}
+            binding.textOpacityValue.text = "0%"
             updatePreview()
             Toast.makeText(requireContext(), "Default (System)-ah reset a ni e", Toast.LENGTH_SHORT).show()
         }
 
         binding.btnApplyTheme.setOnClickListener {
             val context = requireContext()
+            ThemeHelper.setThemeOpacity(context, currentOpacity)
             ThemeHelper.applyThemePreset(context, selectedPreset)
-
-            val needsActivityRecreate = (selectedPreset != initialPreset)
 
             (activity as? MainActivity)?.applyThemeColors()
             viewModel.refreshFontSettings()
 
             dismiss()
-
-            if (needsActivityRecreate) {
-                activity?.recreate()
-            } else {
-                Toast.makeText(context, "${selectedPreset.displayName} theme apply fel a ni e", Toast.LENGTH_SHORT).show()
-            }
+            activity?.recreate()
         }
     }
 
@@ -133,39 +157,14 @@ class ThemeSettingsDialog : BottomSheetDialogFragment() {
         val isSystemNight = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
                 Configuration.UI_MODE_NIGHT_YES
 
-        // 1. Determine Preview Background / Toolbar Color
-        val toolbarColor = when (selectedPreset) {
-            ThemeHelper.ThemePreset.SYSTEM -> if (isSystemNight) Color.parseColor("#222333") else Color.parseColor("#FAF7F0")
-            ThemeHelper.ThemePreset.LIGHT -> Color.parseColor("#FAF7F0")
-            ThemeHelper.ThemePreset.NIGHT -> Color.parseColor("#222333")
-            ThemeHelper.ThemePreset.RED -> Color.parseColor("#FFF0F2")
-            ThemeHelper.ThemePreset.BLUE -> Color.parseColor("#EBF3FA")
-            ThemeHelper.ThemePreset.GREEN -> Color.parseColor("#EDF7EE")
-            ThemeHelper.ThemePreset.YELLOW -> Color.parseColor("#FEF9E7")
-            ThemeHelper.ThemePreset.WHITE -> Color.parseColor("#FFFFFF")
-        }
+        // 1. Determine Preview Background / Toolbar Color with current opacity
+        val toolbarColor = ThemeHelper.getEffectiveToolbarColorForPreset(selectedPreset, context, currentOpacity)
 
-        // 2. Determine Card Color
-        val cardColor = when (selectedPreset) {
-            ThemeHelper.ThemePreset.SYSTEM -> if (isSystemNight) Color.parseColor("#2E2F45") else Color.parseColor("#EBE2CF")
-            ThemeHelper.ThemePreset.LIGHT -> Color.parseColor("#EBE2CF")
-            ThemeHelper.ThemePreset.NIGHT -> Color.parseColor("#2E2F45")
-            ThemeHelper.ThemePreset.RED -> Color.parseColor("#FCE4EC")
-            ThemeHelper.ThemePreset.BLUE -> Color.parseColor("#DCEBF7")
-            ThemeHelper.ThemePreset.GREEN -> Color.parseColor("#DCEDDD")
-            ThemeHelper.ThemePreset.YELLOW -> Color.parseColor("#FBF0CB")
-            ThemeHelper.ThemePreset.WHITE -> Color.parseColor("#F3F4F6")
-        }
+        // 2. Determine Card Color with current opacity
+        val cardColor = ThemeHelper.getEffectiveCardColorForPreset(selectedPreset, context, currentOpacity)
 
-        // 3. Determine Primary Accent Color
-        val primaryColor = when (selectedPreset) {
-            ThemeHelper.ThemePreset.SYSTEM -> if (isSystemNight) Color.parseColor("#90CAF9") else Color.parseColor("#1976D2")
-            else -> try {
-                Color.parseColor(selectedPreset.primaryHex)
-            } catch (_: Exception) {
-                Color.parseColor("#1976D2")
-            }
-        }
+        // 3. Determine Primary Accent Color with current opacity
+        val primaryColor = ThemeHelper.getPrimaryColorForPreset(selectedPreset, context, currentOpacity)
 
         binding.previewMockBody.setBackgroundColor(toolbarColor)
         binding.previewMockToolbar.setBackgroundColor(toolbarColor)
@@ -177,8 +176,6 @@ class ThemeSettingsDialog : BottomSheetDialogFragment() {
         } else {
             Color.parseColor("#15000000")
         }
-
-        val isToolbarDark = ThemeHelper.isColorDark(toolbarColor)
 
         // 4. Custom font color from Font Settings if set for previewed mode
         val isPreviewDark = (selectedPreset == ThemeHelper.ThemePreset.NIGHT) ||
@@ -204,6 +201,13 @@ class ThemeSettingsDialog : BottomSheetDialogFragment() {
         binding.previewMockToolbarTitle.setTextColor(tbTextColor)
         binding.previewMockToolbarBack.setColorFilter(tbTextColor)
         binding.previewMockToolbarSearch.setColorFilter(tbTextColor)
+
+        // 5. Opacity slider styling
+        binding.sliderThemeOpacity.thumbTintList = ColorStateList.valueOf(primaryColor)
+        binding.sliderThemeOpacity.trackActiveTintList = ColorStateList.valueOf(primaryColor)
+        binding.sliderThemeOpacity.trackInactiveTintList = ColorStateList.valueOf(ColorUtils.setAlphaComponent(primaryColor, 50))
+        binding.textOpacityTitle.setTextColor(primaryColor)
+        binding.textOpacityValue.setTextColor(primaryColor)
     }
 
     override fun onDestroyView() {

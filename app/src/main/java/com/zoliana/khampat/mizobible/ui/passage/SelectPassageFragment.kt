@@ -78,13 +78,16 @@ class SelectPassageFragment : Fragment() {
     fun applyTheme() {
         val ctx = context ?: return
         val toolbarColor = ThemeHelper.getEffectiveToolbarColor(ctx)
+        val cardColor = ThemeHelper.getEffectiveCardColor(ctx) ?: toolbarColor
         val fontColor = ThemeHelper.getEffectiveFontColor(ctx)
         val iconColor = ThemeHelper.getEffectiveIconColor(ctx)
         val primaryColor = ThemeHelper.getPrimaryColor(ctx)
         val tbTextColor = ThemeHelper.getContrastingTextColor(toolbarColor, fontColor)
         val tbIconColor = iconColor?.let { ThemeHelper.getContrastingTextColor(toolbarColor, it) } ?: tbTextColor
+        val isDark = ThemeHelper.isColorDark(toolbarColor)
 
         binding.root.setBackgroundColor(toolbarColor)
+        binding.appBarLayout.setBackgroundColor(toolbarColor)
         binding.toolbar.setBackgroundColor(toolbarColor)
         binding.toolbar.setTitleTextColor(tbTextColor)
         binding.toolbar.navigationIcon?.setTint(tbIconColor)
@@ -96,13 +99,27 @@ class SelectPassageFragment : Fragment() {
             primaryColor
         )
 
+        binding.cardSearch.setCardBackgroundColor(cardColor)
+        binding.cardSearch.strokeColor = if (isDark) Color.parseColor("#30FFFFFF") else ColorUtils.setAlphaComponent(primaryColor, 50)
+        binding.cardSearch.strokeWidth = (1 * resources.displayMetrics.density).toInt()
+
+        binding.viewPager.setBackgroundColor(toolbarColor)
+
         val searchPlate = binding.searchView.findViewById<android.widget.EditText>(androidx.appcompat.R.id.search_src_text)
-        searchPlate?.setTextColor(tbTextColor)
-        searchPlate?.setHintTextColor(ColorUtils.setAlphaComponent(tbTextColor, 140))
+        val searchTextColor = ThemeHelper.getContrastingTextColor(cardColor, fontColor)
+        val searchIconColor = iconColor?.let { ThemeHelper.getContrastingTextColor(cardColor, it) } ?: searchTextColor
+        searchPlate?.setTextColor(searchTextColor)
+        searchPlate?.setHintTextColor(ColorUtils.setAlphaComponent(searchTextColor, 140))
         val searchClose = binding.searchView.findViewById<android.widget.ImageView>(androidx.appcompat.R.id.search_close_btn)
-        searchClose?.setColorFilter(tbIconColor)
+        searchClose?.setColorFilter(searchIconColor)
         val searchMag = binding.searchView.findViewById<android.widget.ImageView>(androidx.appcompat.R.id.search_mag_icon)
-        searchMag?.setColorFilter(tbIconColor)
+        searchMag?.setColorFilter(searchIconColor)
+
+        childFragmentManager.fragments.forEach { f ->
+            if (f is BookListFragment) {
+                f.applyTheme()
+            }
+        }
     }
 
     override fun onDestroyView() {

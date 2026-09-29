@@ -1,8 +1,10 @@
 package com.zoliana.khampat.mizobible.ui.transform
 
 import android.app.Dialog
+import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.util.TypedValue
 import android.view.LayoutInflater
@@ -12,6 +14,7 @@ import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.ContextCompat
+import androidx.core.graphics.ColorUtils
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -86,16 +89,15 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
         setupFontList(currentSettings.fontFamily)
         setupFontColorList(activeFontColor)
 
-        // Crash prevention: Slider value hi a step nena inmil turin snapToStep kan hmang vek ang
-        binding.sliderFontSize.value = snapToStep(currentSettings.fontSize, binding.sliderFontSize)
-        binding.sliderLetterSpacing.value =
-            snapToStep(currentSettings.letterSpacing, binding.sliderLetterSpacing)
-        binding.sliderLineHeight.value =
-            snapToStep(currentSettings.lineHeight, binding.sliderLineHeight)
-        binding.sliderPadding.value = snapToStep(viewModel.sidePadding.value, binding.sliderPadding)
+        // Crash prevention: Slider value hi a step nena inmil turin setSafeSliderValue kan hmang vek ang
+        setSafeSliderValue(binding.sliderFontSize, currentSettings.fontSize)
+        setSafeSliderValue(binding.sliderLetterSpacing, currentSettings.letterSpacing)
+        setSafeSliderValue(binding.sliderLineHeight, currentSettings.lineHeight)
+        setSafeSliderValue(binding.sliderPadding, viewModel.sidePadding.value)
 
         updatePreview(currentSettings)
         updateValueTexts(currentSettings, viewModel.sidePadding.value)
+        applyTheme()
 
         binding.sliderFontSize.addOnChangeListener { _, value, _ ->
             updateSettings {
@@ -158,6 +160,16 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
         binding.btnDone.setOnClickListener { dismiss() }
     }
 
+    private fun setSafeSliderValue(slider: Slider, value: Float) {
+        try {
+            slider.value = snapToStep(value, slider)
+        } catch (_: Exception) {
+            try {
+                slider.value = slider.valueFrom
+            } catch (_: Exception) {}
+        }
+    }
+
     // He function hi a pawimawh ber: Value kha stepSize hnai berah a round sak ang
     private fun snapToStep(value: Float, slider: Slider): Float {
         val step = slider.stepSize
@@ -167,7 +179,8 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
         if (step <= 0f) return clamped
 
         val steps = ((clamped - from) / step).roundToInt()
-        return from + (steps * step)
+        val snapped = from + (steps * step)
+        return snapped.coerceIn(from, to)
     }
 
     private fun setupFontList(currentFont: String) {
@@ -230,44 +243,132 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
         ThemeHelper.setFontColor(requireContext(), newSettings.fontColor)
         ThemeHelper.setCustomIconColor(requireContext(), newSettings.fontColor)
         (activity as? MainActivity)?.applyThemeColors()
-        binding.btnDone.setTextColor(Color.WHITE)
         updatePreview(newSettings)
         updateValueTexts(newSettings, viewModel.sidePadding.value)
+        applyTheme()
+    }
+
+    fun applyTheme() {
+        val ctx = context ?: return
+        val bgColor = ThemeHelper.getEffectiveToolbarColor(ctx)
+        val cardColor = ThemeHelper.getEffectiveCardColor(ctx) ?: bgColor
+        val primaryColor = ThemeHelper.getPrimaryColor(ctx)
+        val fontColor = ThemeHelper.getEffectiveFontColor(ctx)
+        val iconColor = ThemeHelper.getEffectiveIconColor(ctx) ?: primaryColor
+        val isDark = ThemeHelper.isColorDark(bgColor)
+
+        val density = resources.displayMetrics.density
+        val dialogBg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadii = floatArrayOf(
+                28f * density, 28f * density,
+                28f * density, 28f * density,
+                0f, 0f, 0f, 0f
+            )
+            setColor(bgColor)
+        }
+        binding.root.background = dialogBg
+
+        val titleColor = ThemeHelper.getContrastingTextColor(bgColor, fontColor)
+        val subtitleColor = ColorUtils.setAlphaComponent(titleColor, 180)
+
+        binding.dialogHandle?.setBackgroundColor(ColorUtils.setAlphaComponent(titleColor, 50))
+        binding.textFontSettingsTitle?.setTextColor(titleColor)
+
+        binding.cardPreview?.setCardBackgroundColor(cardColor)
+        binding.cardPreview?.strokeColor = if (isDark) Color.parseColor("#25FFFFFF") else Color.parseColor("#15000000")
+        binding.cardPreview?.strokeWidth = (1 * density).toInt()
+
+        binding.textFamilyTitle?.setTextColor(subtitleColor)
+        binding.textFontColorSectionTitle?.setTextColor(subtitleColor)
+        binding.textFontColorSectionTitle?.text = if (isDark) {
+            "Font Color (Dark Mode - A var lam chi chauh)"
+        } else {
+            "Font Color (Light Mode - A fiah lam chi chauh)"
+        }
+
+        binding.btnFontColorPicker?.backgroundTintList = ColorStateList.valueOf(cardColor)
+        binding.btnFontColorPicker?.setTextColor(primaryColor)
+        binding.btnFontColorPicker?.iconTint = ColorStateList.valueOf(primaryColor)
+        binding.btnFontColorPicker?.strokeColor = ColorStateList.valueOf(ColorUtils.setAlphaComponent(primaryColor, 80))
+
+        binding.textFontSizeTitle?.setTextColor(subtitleColor)
+        binding.textLineHeightTitle?.setTextColor(subtitleColor)
+        binding.textLetterSpacingTitle?.setTextColor(subtitleColor)
+        binding.textPaddingTitle?.setTextColor(subtitleColor)
+
+        binding.textFontSizeVal.setTextColor(primaryColor)
+        binding.textLetterSpacingVal.setTextColor(primaryColor)
+        binding.textLineHeightVal.setTextColor(primaryColor)
+        binding.textPaddingVal.setTextColor(primaryColor)
+
+        fun styleSlider(slider: Slider) {
+            slider.thumbTintList = ColorStateList.valueOf(primaryColor)
+            slider.trackActiveTintList = ColorStateList.valueOf(primaryColor)
+            slider.trackInactiveTintList = ColorStateList.valueOf(ColorUtils.setAlphaComponent(primaryColor, 60))
+            slider.haloTintList = ColorStateList.valueOf(ColorUtils.setAlphaComponent(primaryColor, 40))
+        }
+        styleSlider(binding.sliderFontSize)
+        styleSlider(binding.sliderLetterSpacing)
+        styleSlider(binding.sliderLineHeight)
+        styleSlider(binding.sliderPadding)
+
+        val btnTextColor = ThemeHelper.getContrastingTextColor(cardColor, fontColor)
+        val isBold = viewModel.fontSettings.value.isBold
+        val isItalic = viewModel.fontSettings.value.isItalic
+
+        binding.btnBold.backgroundTintList = ColorStateList.valueOf(if (isBold) ColorUtils.setAlphaComponent(primaryColor, 50) else cardColor)
+        binding.btnBold.setTextColor(if (isBold) primaryColor else btnTextColor)
+        binding.btnBold.iconTint = ColorStateList.valueOf(primaryColor)
+        binding.btnBold.strokeColor = ColorStateList.valueOf(if (isBold) primaryColor else ColorUtils.setAlphaComponent(btnTextColor, 40))
+
+        binding.btnItalic.backgroundTintList = ColorStateList.valueOf(if (isItalic) ColorUtils.setAlphaComponent(primaryColor, 50) else cardColor)
+        binding.btnItalic.setTextColor(if (isItalic) primaryColor else btnTextColor)
+        binding.btnItalic.iconTint = ColorStateList.valueOf(primaryColor)
+        binding.btnItalic.strokeColor = ColorStateList.valueOf(if (isItalic) primaryColor else ColorUtils.setAlphaComponent(btnTextColor, 40))
+
+        binding.btnDone.backgroundTintList = ColorStateList.valueOf(primaryColor)
+        binding.btnDone.setTextColor(Color.WHITE)
+
+        binding.recyclerFonts.adapter?.notifyDataSetChanged()
     }
 
     private fun updateValueTexts(settings: FontSettings, padding: Float) {
-        binding.textFontSizeVal.text = settings.fontSize.toInt().toString()
-        binding.textPaddingVal.text = padding.toInt().toString()
-        binding.textLetterSpacingVal.text = String.format("%.2f", settings.letterSpacing)
-        binding.textLineHeightVal.text = String.format("%.2f", settings.lineHeight)
+        val b = _binding ?: return
+        b.textFontSizeVal.text = settings.fontSize.toInt().toString()
+        b.textPaddingVal.text = padding.toInt().toString()
+        b.textLetterSpacingVal.text = String.format(java.util.Locale.US, "%.2f", settings.letterSpacing)
+        b.textLineHeightVal.text = String.format(java.util.Locale.US, "%.2f", settings.lineHeight)
 
         if (settings.isBold) {
-            binding.btnBold.setIconResource(R.drawable.ic_check_24)
-            binding.btnBold.alpha = 1.0f
+            b.btnBold.setIconResource(R.drawable.ic_check_24)
+            b.btnBold.alpha = 1.0f
         } else {
-            binding.btnBold.icon = null
-            binding.btnBold.alpha = 0.5f
+            b.btnBold.icon = null
+            b.btnBold.alpha = 0.5f
         }
 
         if (settings.isItalic) {
-            binding.btnItalic.setIconResource(R.drawable.ic_check_24)
-            binding.btnItalic.alpha = 1.0f
+            b.btnItalic.setIconResource(R.drawable.ic_check_24)
+            b.btnItalic.alpha = 1.0f
         } else {
-            binding.btnItalic.icon = null
-            binding.btnItalic.alpha = 0.5f
+            b.btnItalic.icon = null
+            b.btnItalic.alpha = 0.5f
         }
     }
 
     private fun updatePreview(settings: FontSettings) {
-        binding.textPreview.setTextSize(TypedValue.COMPLEX_UNIT_SP, settings.fontSize)
-        binding.textPreview.letterSpacing = settings.letterSpacing
+        val b = _binding ?: return
+        val ctx = context ?: return
+        b.textPreview.setTextSize(TypedValue.COMPLEX_UNIT_SP, settings.fontSize)
+        b.textPreview.letterSpacing = settings.letterSpacing
         val density = resources.displayMetrics.density
         val mult = if (settings.lineHeight <= 1.05f) 1.28f else settings.lineHeight
-        binding.textPreview.setLineSpacing((2 * density), mult)
+        b.textPreview.setLineSpacing((2 * density), mult)
 
-        val effectiveVerseBg = ThemeHelper.getEffectiveToolbarColor(requireContext())
-        val effectiveCardBg = ThemeHelper.getEffectiveCardColor(requireContext()) ?: effectiveVerseBg
-        binding.cardPreview?.setCardBackgroundColor(effectiveCardBg)
+        val effectiveVerseBg = ThemeHelper.getEffectiveToolbarColor(ctx)
+        val effectiveCardBg = ThemeHelper.getEffectiveCardColor(ctx) ?: effectiveVerseBg
+        b.cardPreview?.setCardBackgroundColor(effectiveCardBg)
 
         val customColor = try {
             if (settings.fontColor.isNotBlank() && settings.fontColor != "default") {
@@ -276,7 +377,7 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
         } catch (_: Exception) { null }
 
         val finalTextColor = ThemeHelper.getContrastingTextColor(effectiveCardBg, customColor)
-        binding.textPreview.setTextColor(finalTextColor)
+        b.textPreview.setTextColor(finalTextColor)
 
         val style = when {
             settings.isBold && settings.isItalic -> Typeface.BOLD_ITALIC
@@ -286,7 +387,7 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
         }
 
         val tf = getFontTypeface(settings.fontFamily, style)
-        binding.textPreview.typeface = tf
+        b.textPreview.typeface = tf
     }
 
     private fun getFontTypeface(fontName: String, style: Int): Typeface {
@@ -349,28 +450,16 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
             val tf = getFontTypeface(fontName, Typeface.NORMAL)
             holder.textFontName.typeface = tf
 
-            val typedValue = TypedValue()
-            val theme = holder.itemView.context.theme
+            val primaryColor = ThemeHelper.getPrimaryColor(holder.itemView.context)
+            val fontColor = ThemeHelper.getEffectiveFontColor(holder.itemView.context)
+            val bgColor = ThemeHelper.getEffectiveToolbarColor(holder.itemView.context)
+            val normalTextColor = ThemeHelper.getContrastingTextColor(bgColor, fontColor)
 
             if (fontName == selectedFont) {
-                if (theme.resolveAttribute(
-                        androidx.appcompat.R.attr.colorPrimary,
-                        typedValue,
-                        true
-                    )
-                ) {
-                    holder.textFontName.setTextColor(typedValue.data)
-                }
+                holder.textFontName.setTextColor(primaryColor)
                 holder.textFontName.setBackgroundResource(R.drawable.bg_selection_box)
             } else {
-                if (theme.resolveAttribute(
-                        com.google.android.material.R.attr.colorOnSurface,
-                        typedValue,
-                        true
-                    )
-                ) {
-                    holder.textFontName.setTextColor(typedValue.data)
-                }
+                holder.textFontName.setTextColor(normalTextColor)
                 holder.textFontName.background = null
             }
 

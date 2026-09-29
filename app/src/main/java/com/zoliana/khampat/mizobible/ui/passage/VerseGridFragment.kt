@@ -92,9 +92,11 @@ class VerseGridFragment : Fragment() {
         val cardTextColor = ThemeHelper.getContrastingTextColor(cardColor, fontColor)
 
         binding.root.setBackgroundColor(toolbarColor)
+        binding.appBarLayout.setBackgroundColor(toolbarColor)
         binding.toolbar.setBackgroundColor(toolbarColor)
         binding.toolbar.setTitleTextColor(tbTextColor)
         binding.toolbar.navigationIcon?.setTint(tbIconColor)
+        binding.gridViewVerses.setBackgroundColor(toolbarColor)
 
         binding.cardSelectedVerse.setCardBackgroundColor(cardColor)
         binding.textSelectedVerseContent.setTextColor(cardTextColor)

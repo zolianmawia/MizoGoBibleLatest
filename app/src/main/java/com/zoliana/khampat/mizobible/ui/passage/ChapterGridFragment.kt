@@ -85,9 +85,11 @@ class ChapterGridFragment : Fragment() {
         val tbIconColor = iconColor?.let { ThemeHelper.getContrastingTextColor(toolbarColor, it) } ?: tbTextColor
 
         binding.root.setBackgroundColor(toolbarColor)
+        binding.appBarLayout.setBackgroundColor(toolbarColor)
         binding.toolbar.setBackgroundColor(toolbarColor)
         binding.toolbar.setTitleTextColor(tbTextColor)
         binding.toolbar.navigationIcon?.setTint(tbIconColor)
+        binding.gridViewChapters.setBackgroundColor(toolbarColor)
     }
 
     private fun loadChapters() {

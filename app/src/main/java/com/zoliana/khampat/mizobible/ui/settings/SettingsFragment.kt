@@ -226,15 +226,19 @@ class SettingsFragment : Fragment() {
     private fun applyCustomViewThemes() {
         val ctx = context ?: return
         val cardColor = ThemeHelper.getEffectiveCardColor(ctx)
+        val fontColor = ThemeHelper.getEffectiveFontColor(ctx)
+        val iconColor = ThemeHelper.getEffectiveIconColor(ctx)
+        val primaryColor = ThemeHelper.getPrimaryColor(ctx)
         val isDark = ThemeHelper.isCurrentThemeDark(ctx)
-        val deleteRed = if (isDark) android.graphics.Color.parseColor("#FF6B6B") else android.graphics.Color.parseColor("#D32F2F")
         val btnBg = cardColor ?: if (isDark) android.graphics.Color.parseColor("#2E2F45") else android.graphics.Color.parseColor("#FCE4EC")
+        val textColor = ThemeHelper.getContrastingTextColor(btnBg, fontColor)
+        val effectiveIcon = iconColor ?: primaryColor
         
         binding.btnResetAll.backgroundTintList = android.content.res.ColorStateList.valueOf(btnBg)
-        binding.btnResetAll.setTextColor(deleteRed)
-        binding.btnResetAll.iconTint = android.content.res.ColorStateList.valueOf(deleteRed)
+        binding.btnResetAll.setTextColor(textColor)
+        binding.btnResetAll.iconTint = android.content.res.ColorStateList.valueOf(effectiveIcon)
         binding.btnResetAll.strokeColor = android.content.res.ColorStateList.valueOf(
-            androidx.core.graphics.ColorUtils.setAlphaComponent(deleteRed, if (isDark) 90 else 60)
+            androidx.core.graphics.ColorUtils.setAlphaComponent(primaryColor, if (isDark) 90 else 60)
         )
         binding.btnResetAll.strokeWidth = (1.5f * resources.displayMetrics.density).toInt()
     }

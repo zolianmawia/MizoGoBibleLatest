@@ -85,6 +85,9 @@ class BookRecyclerAdapter(private val onBookClick: (String) -> Unit) :
         override fun bind(item: PassageListItem) {
             val header = item as PassageListItem.Header
             binding.textHeader.text = header.title
+            val ctx = binding.root.context
+            val primaryColor = com.zoliana.khampat.mizobible.utils.ThemeHelper.getPrimaryColor(ctx)
+            binding.textHeader.setTextColor(primaryColor)
         }
     }
 
@@ -94,7 +97,13 @@ class BookRecyclerAdapter(private val onBookClick: (String) -> Unit) :
     ) : BaseViewHolder(binding) {
         override fun bind(item: PassageListItem) {
             val book = item as PassageListItem.Book
-            (binding.root as? android.widget.TextView)?.text = book.name
+            val textView = binding.root as? android.widget.TextView ?: binding.textBookName
+            textView.text = book.name
+            val ctx = binding.root.context
+            val toolbarColor = com.zoliana.khampat.mizobible.utils.ThemeHelper.getEffectiveToolbarColor(ctx)
+            val fontColor = com.zoliana.khampat.mizobible.utils.ThemeHelper.getEffectiveFontColor(ctx)
+            val textColor = com.zoliana.khampat.mizobible.utils.ThemeHelper.getContrastingTextColor(toolbarColor, fontColor)
+            textView.setTextColor(textColor)
             binding.root.setOnClickListener {
                 onBookClick(book.name)
             }

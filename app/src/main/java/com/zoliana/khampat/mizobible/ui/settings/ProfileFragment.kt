@@ -75,12 +75,27 @@ class ProfileFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        val initialStatusBarHeight = run {
+            val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
+            if (resourceId > 0) resources.getDimensionPixelSize(resourceId) else (28 * resources.displayMetrics.density).toInt()
+        }
+        binding?.layoutProfileToolbar?.updatePadding(top = initialStatusBarHeight)
+
         binding?.root?.let { rootView ->
-            ViewCompat.setOnApplyWindowInsetsListener(rootView) { v, insets ->
+            ViewCompat.setOnApplyWindowInsetsListener(rootView) { _, insets ->
                 val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-                v.updatePadding(bottom = systemBars.bottom)
+                binding?.root?.updatePadding(bottom = systemBars.bottom)
+                val sbTop = systemBars.top
+                if (sbTop > 0) {
+                    binding?.layoutProfileToolbar?.updatePadding(top = sbTop)
+                }
                 insets
             }
+            ViewCompat.requestApplyInsets(rootView)
+        }
+
+        activity?.let { act ->
+            androidx.core.view.WindowCompat.getInsetsController(act.window, act.window.decorView).isAppearanceLightStatusBars = false
         }
 
         auth = FirebaseAuth.getInstance()
@@ -98,6 +113,10 @@ class ProfileFragment : Fragment() {
             it.colorFilter = null
             androidx.core.widget.ImageViewCompat.setImageTintList(it, null)
         }
+        binding?.imgProfileHeader?.let {
+            it.colorFilter = null
+            androidx.core.widget.ImageViewCompat.setImageTintList(it, null)
+        }
         binding?.imgGoldBadge?.let {
             it.colorFilter = null
             androidx.core.widget.ImageViewCompat.setImageTintList(it, null)
@@ -106,6 +125,18 @@ class ProfileFragment : Fragment() {
             it.colorFilter = null
             androidx.core.widget.ImageViewCompat.setImageTintList(it, null)
         }
+
+        binding?.btnProfileDrawer?.let { btn ->
+            btn.setColorFilter(android.graphics.Color.WHITE)
+            androidx.core.widget.ImageViewCompat.setImageTintList(
+                btn,
+                android.content.res.ColorStateList.valueOf(android.graphics.Color.WHITE)
+            )
+            btn.setOnClickListener {
+                (activity as? MainActivity)?.openDrawer()
+            }
+        }
+        binding?.textProfileToolbarTitle?.setTextColor(android.graphics.Color.WHITE)
 
         binding?.btnLoginTrigger?.setOnClickListener { showLoginDialog() }
         binding?.btnLoginTrigger?.setOnLongClickListener {
@@ -523,7 +554,14 @@ class ProfileFragment : Fragment() {
 
     override fun onResume() {
         super.onResume()
+        activity?.let { act ->
+            androidx.core.view.WindowCompat.getInsetsController(act.window, act.window.decorView).isAppearanceLightStatusBars = false
+        }
         binding?.imgProfile?.let {
+            it.colorFilter = null
+            androidx.core.widget.ImageViewCompat.setImageTintList(it, null)
+        }
+        binding?.imgProfileHeader?.let {
             it.colorFilter = null
             androidx.core.widget.ImageViewCompat.setImageTintList(it, null)
         }

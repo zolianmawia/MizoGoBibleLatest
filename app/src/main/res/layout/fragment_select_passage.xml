@@ -33,6 +33,7 @@
             app:tabTextColor="?attr/colorOnSurfaceVariant" />
 
         <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_search"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="16dp"
@@ -40,7 +41,6 @@
             android:layout_marginBottom="16dp"
             app:cardCornerRadius="28dp"
             app:cardElevation="0dp"
-            app:strokeColor="?attr/colorOutline"
             app:strokeWidth="1dp">
 
             <androidx.appcompat.widget.SearchView

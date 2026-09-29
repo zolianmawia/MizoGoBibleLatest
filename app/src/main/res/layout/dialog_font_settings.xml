@@ -11,6 +11,7 @@
 
     <!-- BottomSheet Handle -->
     <View
+        android:id="@+id/dialog_handle"
         android:layout_width="40dp"
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
@@ -30,6 +31,7 @@
             android:paddingTop="8dp">
 
             <TextView
+                android:id="@+id/text_font_settings_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Font Settings"
@@ -60,6 +62,7 @@
 
             <!-- Font Family Horizontal List -->
             <TextView
+                android:id="@+id/text_family_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
@@ -129,6 +132,7 @@
                 android:orientation="horizontal">
 
                 <TextView
+                    android:id="@+id/text_font_size_title"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
@@ -176,6 +180,7 @@
                         android:orientation="horizontal">
 
                         <TextView
+                            android:id="@+id/text_line_height_title"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
@@ -216,6 +221,7 @@
                         android:orientation="horizontal">
 
                         <TextView
+                            android:id="@+id/text_letter_spacing_title"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
@@ -252,6 +258,7 @@
                 android:orientation="horizontal">
 
                 <TextView
+                    android:id="@+id/text_padding_title"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"

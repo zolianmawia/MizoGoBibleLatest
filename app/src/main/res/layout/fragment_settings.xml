@@ -331,7 +331,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:text="Reset All Local Data"
-                android:textColor="#FF5252" />
+                app:icon="@drawable/ic_delete_24" />
 
             <TextView
                 android:id="@+id/text_app_version"

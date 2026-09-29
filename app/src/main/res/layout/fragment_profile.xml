@@ -11,132 +11,210 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
-        android:orientation="vertical"
-        android:paddingStart="@dimen/profile_padding_start"
-        android:paddingTop="@dimen/profile_padding_top"
-        android:paddingEnd="@dimen/profile_padding_end"
-        android:paddingBottom="@dimen/profile_padding_bottom">
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        android:orientation="vertical">
 
-        <!-- Not Logged In View -->
-        <LinearLayout
-            android:id="@+id/layout_not_logged_in"
+        <!-- Top Header Container (header.png bleeding through status bar) -->
+        <FrameLayout
+            android:id="@+id/layout_profile_header_container"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/not_logged_in_margin_top"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:visibility="gone">
+            android:layout_height="220dp">
 
             <ImageView
-                android:layout_width="@dimen/profile_icon_size"
-                android:layout_height="@dimen/profile_icon_size"
-                android:alpha="0.2"
-                android:contentDescription="Profile Icon"
-                android:src="@drawable/ic_person_24" />
+                android:id="@+id/img_profile_header"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:src="@drawable/header"
+                android:contentDescription="Profile Header Banner" />
 
-            <TextView
-                android:layout_width="wrap_content"
+            <!-- Top scrim to ensure battery/status bar icons and toolbar items are crystal clear -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="110dp"
+                android:layout_gravity="top"
+                android:background="@drawable/bg_top_scrim" />
+
+            <!-- Top Toolbar with Drawer Hamburger Icon and 'You' Title -->
+            <LinearLayout
+                android:id="@+id/layout_profile_toolbar"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/login_sync_margin_top"
-                android:text="Login to Sync Data"
-                android:textSize="@dimen/login_sync_text_size"
-                android:textStyle="bold" />
+                android:layout_gravity="top"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="12dp"
+                android:paddingTop="28dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="8dp">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_login_trigger"
-                style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/login_trigger_margin_top"
-                android:text="Login with Google" />
-        </LinearLayout>
-
-        <!-- Logged In Profile View -->
-        <LinearLayout
-            android:id="@+id/layout_profile"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center_horizontal"
-            android:orientation="vertical">
-
-            <FrameLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/profile_image_margin_top">
-
-                <com.google.android.material.imageview.ShapeableImageView
-                    android:id="@+id/img_profile"
-                    android:layout_width="@dimen/profile_image_size"
-                    android:layout_height="@dimen/profile_image_size"
-                    android:scaleType="centerCrop"
-                    app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
-                    app:strokeColor="?attr/colorOutline"
-                    app:strokeWidth="2dp" />
-
-                <View
-                    android:id="@+id/view_profile_placeholder"
-                    android:layout_width="@dimen/profile_image_size"
-                    android:layout_height="@dimen/profile_image_size"
-                    android:background="@drawable/bg_circle_gradient" />
+                <ImageView
+                    android:id="@+id/btn_profile_drawer"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:contentDescription="Navigation Drawer"
+                    android:focusable="true"
+                    android:padding="12dp"
+                    android:src="@drawable/menu"
+                    android:tint="@android:color/white"
+                    app:tint="@android:color/white" />
 
                 <TextView
-                    android:id="@+id/text_profile_initial"
+                    android:id="@+id/text_profile_toolbar_title"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:text="U"
-                    android:textColor="@color/white"
-                    android:textSize="@dimen/profile_initial_text_size"
+                    android:layout_marginStart="8dp"
+                    android:shadowColor="#B0000000"
+                    android:shadowDx="0"
+                    android:shadowDy="2"
+                    android:shadowRadius="4"
+                    android:text="You"
+                    android:textColor="@android:color/white"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- Main Body Content Container with standard padding -->
+        <LinearLayout
+            android:id="@+id/layout_profile_content"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:paddingStart="@dimen/profile_padding_start"
+            android:paddingEnd="@dimen/profile_padding_end"
+            android:paddingBottom="@dimen/profile_padding_bottom">
+
+            <!-- Not Logged In View -->
+            <LinearLayout
+                android:id="@+id/layout_not_logged_in"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/not_logged_in_margin_top"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <ImageView
+                    android:layout_width="@dimen/profile_icon_size"
+                    android:layout_height="@dimen/profile_icon_size"
+                    android:alpha="0.2"
+                    android:contentDescription="Profile Icon"
+                    android:src="@drawable/ic_person_24" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/login_sync_margin_top"
+                    android:text="Login to Sync Data"
+                    android:textSize="@dimen/login_sync_text_size"
                     android:textStyle="bold" />
 
-                <ImageView
-                    android:id="@+id/img_gold_badge"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_gravity="bottom|end"
-                    android:src="@drawable/gold"
-                    android:visibility="gone"
-                    tools:visibility="visible" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_login_trigger"
+                    style="@style/Widget.Material3.Button.TonalButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="@dimen/login_trigger_margin_top"
+                    android:text="Login with Google" />
+            </LinearLayout>
 
-                <ImageView
-                    android:id="@+id/img_silver_badge"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:layout_gravity="bottom|end"
-                    android:src="@drawable/silver"
-                    android:visibility="gone"
-                    tools:visibility="gone" />
-
-            </FrameLayout>
-
-            <TextView
-                android:id="@+id/text_user_name"
-                android:layout_width="wrap_content"
+            <!-- Logged In Profile View -->
+            <LinearLayout
+                android:id="@+id/layout_profile"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/user_name_margin_top"
-                android:text="User Name"
-                android:textSize="@dimen/user_name_text_size"
-                android:textStyle="bold" />
+                android:clipChildren="false"
+                android:clipToPadding="false"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/text_membership_status"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/membership_status_margin_top"
-                android:text="Free Member"
-                android:textColor="?attr/colorPrimary"
-                android:textSize="@dimen/membership_status_text_size"
-                android:textStyle="bold" />
+                <FrameLayout
+                    android:id="@+id/layout_profile_avatar"
+                    android:layout_width="@dimen/profile_image_size"
+                    android:layout_height="@dimen/profile_image_size"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="-45dp"
+                    android:elevation="6dp">
 
-            <TextView
-                android:id="@+id/text_user_id"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/user_id_margin_top"
-                android:alpha="0.6"
-                android:text="user@email.com"
-                android:textSize="@dimen/user_id_text_size" />
+                    <com.google.android.material.imageview.ShapeableImageView
+                        android:id="@+id/img_profile"
+                        android:layout_width="@dimen/profile_image_size"
+                        android:layout_height="@dimen/profile_image_size"
+                        android:scaleType="centerCrop"
+                        app:shapeAppearanceOverlay="@style/ShapeAppearance.Material3.Corner.Full"
+                        app:strokeColor="@color/white"
+                        app:strokeWidth="3dp" />
+
+                    <View
+                        android:id="@+id/view_profile_placeholder"
+                        android:layout_width="@dimen/profile_image_size"
+                        android:layout_height="@dimen/profile_image_size"
+                        android:background="@drawable/bg_circle_gradient" />
+
+                    <TextView
+                        android:id="@+id/text_profile_initial"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center"
+                        android:text="U"
+                        android:textColor="@color/white"
+                        android:textSize="@dimen/profile_initial_text_size"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:id="@+id/img_gold_badge"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_gravity="bottom|end"
+                        android:src="@drawable/gold"
+                        android:visibility="gone"
+                        tools:visibility="visible" />
+
+                    <ImageView
+                        android:id="@+id/img_silver_badge"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_gravity="bottom|end"
+                        android:src="@drawable/silver"
+                        android:visibility="gone"
+                        tools:visibility="gone" />
+
+                </FrameLayout>
+
+                <TextView
+                    android:id="@+id/text_user_name"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="User Name"
+                    android:textSize="@dimen/user_name_text_size"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/text_membership_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Free Member"
+                    android:textColor="?attr/colorPrimary"
+                    android:textSize="@dimen/membership_status_text_size"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/text_user_id"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:alpha="0.6"
+                    android:text="user@email.com"
+                    android:textSize="@dimen/user_id_text_size" />
 
             <!-- Stats Card -->
             <com.google.android.material.card.MaterialCardView
@@ -554,5 +632,6 @@
                 app:icon="@drawable/ic_logout"
                 app:iconTint="?attr/colorError" />
         </LinearLayout>
+    </LinearLayout>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

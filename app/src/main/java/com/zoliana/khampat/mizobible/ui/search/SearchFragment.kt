@@ -304,9 +304,32 @@ class SearchFragment : Fragment() {
         val names = versionPairs.map { it.second }.toMutableList()
         names.add("Download More...")
 
-        val dialog = MaterialAlertDialogBuilder(requireContext())
+        val ctx = requireContext()
+        val toolbarColor = ThemeHelper.getEffectiveToolbarColor(ctx)
+        val fontColor = ThemeHelper.getEffectiveFontColor(ctx)
+        val primaryColor = ThemeHelper.getPrimaryColor(ctx)
+        val tbTextColor = ThemeHelper.getContrastingTextColor(toolbarColor, fontColor)
+        val selectedVersion = viewModel.currentVersion.value
+
+        val adapter = object : android.widget.ArrayAdapter<String>(ctx, android.R.layout.select_dialog_item, android.R.id.text1, names) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val v = super.getView(position, convertView, parent)
+                val tv = v.findViewById<TextView>(android.R.id.text1)
+                val isSelected = position < versionPairs.size && versionPairs[position].first.equals(selectedVersion, ignoreCase = true)
+                val isDownloadMore = position == names.size - 1
+
+                tv.setTextColor(if (isSelected) primaryColor else if (isDownloadMore) primaryColor else tbTextColor)
+                tv.typeface = if (isSelected) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT
+                val padH = (20 * resources.displayMetrics.density).toInt()
+                val padV = (14 * resources.displayMetrics.density).toInt()
+                tv.setPadding(padH, padV, padH, padV)
+                return v
+            }
+        }
+
+        val dialog = MaterialAlertDialogBuilder(ctx)
             .setTitle("Select Version")
-            .setItems(names.toTypedArray()) { _, which ->
+            .setAdapter(adapter) { _, which ->
                 if (which == names.size - 1) {
                     (requireActivity() as? MainActivity)?.showDownloadableVersionsDialog()
                 } else {
@@ -316,6 +339,10 @@ class SearchFragment : Fragment() {
                     }
                 }
             }.show()
+
+        val titleView = dialog.findViewById<TextView>(androidx.appcompat.R.id.alertTitle)
+        titleView?.setTextColor(tbTextColor)
+
         (requireActivity() as? MainActivity)?.limitDialogWidth(dialog)
     }
 

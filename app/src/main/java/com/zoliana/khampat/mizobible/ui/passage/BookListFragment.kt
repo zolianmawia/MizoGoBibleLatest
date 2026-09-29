@@ -56,8 +56,24 @@ class BookListFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        applyTheme()
         setupRecyclerView()
         loadBooks()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyTheme()
+    }
+
+    fun applyTheme() {
+        val ctx = context ?: return
+        val toolbarColor = com.zoliana.khampat.mizobible.utils.ThemeHelper.getEffectiveToolbarColor(ctx)
+        _binding?.let { b ->
+            b.root.setBackgroundColor(toolbarColor)
+            b.recyclerViewBooks.setBackgroundColor(toolbarColor)
+            b.recyclerViewBooks.adapter?.notifyDataSetChanged()
+        }
     }
 
     private fun setupRecyclerView() {

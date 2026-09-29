@@ -26,6 +26,7 @@ import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
@@ -499,9 +500,67 @@ class TransformFragment : Fragment() {
             b.recyclerviewBible.setBackgroundColor(toolbarColor)
             b.recyclerviewBibleSplit.setBackgroundColor(toolbarColor)
             b.textChapterTitle.setTextColor(textColor)
+            updateSplitDividerTheme()
         }
         bibleAdapter?.notifyDataSetChanged()
         splitBibleAdapter?.notifyDataSetChanged()
+    }
+
+    private fun updateSplitDividerTheme() {
+        val b = binding ?: return
+        val ctx = context ?: return
+        val toolbarColor = ThemeHelper.getEffectiveToolbarColor(ctx)
+        val cardColor = ThemeHelper.getEffectiveCardColor(ctx) ?: toolbarColor
+        val primaryColor = ThemeHelper.getPrimaryColor(ctx)
+        val opacity = ThemeHelper.getThemeOpacity(ctx)
+        val isDark = ThemeHelper.isColorDark(toolbarColor)
+        val density = resources.displayMetrics.density
+
+        // Blend amount increases with theme opacity so when dragged to the right, divider gets richer!
+        val blendFactor = (0.28f + (opacity * 0.32f)).coerceIn(0.25f, 0.65f)
+        val dividerBg = if (isDark) {
+            ColorUtils.blendARGB(toolbarColor, primaryColor, blendFactor)
+        } else {
+            ColorUtils.blendARGB(cardColor, primaryColor, blendFactor)
+        }
+        val strokeAlpha = (120 + (opacity * 135)).toInt().coerceIn(120, 255)
+        val dividerStroke = ColorUtils.setAlphaComponent(primaryColor, strokeAlpha)
+
+        val dividerDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(dividerBg)
+            setStroke((1.5f * density).toInt(), dividerStroke)
+        }
+        b.splitDividerLine.background = dividerDrawable
+        b.splitDividerContainer.setBackgroundColor(Color.TRANSPARENT)
+
+        // The center circular handle
+        b.splitHandle.setCardBackgroundColor(primaryColor)
+        val handleIconColor = ThemeHelper.getContrastingTextColor(primaryColor)
+        b.splitHandle.strokeColor = ColorUtils.setAlphaComponent(handleIconColor, 100)
+        b.splitHandle.strokeWidth = (1 * density).toInt()
+        b.textHandleIcon.setColorFilter(handleIconColor)
+
+        // Split controls text and buttons (for horizontal split / portrait)
+        val versionBg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 12 * density
+            setColor(ColorUtils.setAlphaComponent(primaryColor, if (isDark) 50 else 35))
+            setStroke((1 * density).toInt(), ColorUtils.setAlphaComponent(primaryColor, 110))
+        }
+        b.textParallelLineVersion.background = versionBg
+        b.textParallelLineVersion.setTextColor(primaryColor)
+        androidx.core.widget.TextViewCompat.setCompoundDrawableTintList(
+            b.textParallelLineVersion,
+            ColorStateList.valueOf(primaryColor)
+        )
+
+        val closeBg = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(ColorUtils.setAlphaComponent(primaryColor, if (isDark) 45 else 25))
+        }
+        b.btnParallelLineClose.background = closeBg
+        b.btnParallelLineClose.setColorFilter(primaryColor)
     }
 
     override fun onResume() {
@@ -563,6 +622,7 @@ class TransformFragment : Fragment() {
             gravity = Gravity.CENTER
         }
         binding?.layoutSplitBarControls?.visibility = if (isVertical) View.GONE else View.VISIBLE
+        updateSplitDividerTheme()
         updateBiblePaddings()
         setBibleWeights(1f, 1f, isVertical)
     }

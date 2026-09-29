@@ -256,7 +256,7 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         binding.drawerLayout.addDrawerListener(object : androidx.drawerlayout.widget.DrawerLayout.SimpleDrawerListener() {
             override fun onDrawerSlide(drawerView: View, slideOffset: Float) {
                 val insetsController = androidx.core.view.WindowCompat.getInsetsController(window, window.decorView)
-                if (slideOffset > 0.15f) {
+                if (slideOffset > 0.15f || navController.currentDestination?.id == R.id.nav_you) {
                     insetsController.isAppearanceLightStatusBars = false
                 } else {
                     val tbColor = ThemeHelper.getEffectiveToolbarColor(this@MainActivity)
@@ -265,8 +265,10 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
             }
 
             override fun onDrawerClosed(drawerView: View) {
+                val isProfileScreen = navController.currentDestination?.id == R.id.nav_you
                 val tbColor = ThemeHelper.getEffectiveToolbarColor(this@MainActivity)
-                androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = !ThemeHelper.isColorDark(tbColor)
+                val lightStatusBars = if (isProfileScreen) false else !ThemeHelper.isColorDark(tbColor)
+                androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = lightStatusBars
             }
         })
 
@@ -293,12 +295,13 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
                 binding.appBarMain.bottomContainer.visibility = View.VISIBLE
             }
 
-            // Hide main ActionBar and AppBarLayout for passage selection and search screens
-            if (destination.id in passageSelectionScreens || destination.id == R.id.nav_search) {
+            // Hide main ActionBar and AppBarLayout for passage selection, search, and Profile (nav_you) screens
+            val customHeaderScreens = passageSelectionScreens + listOf(R.id.nav_search, R.id.nav_you)
+            if (destination.id in customHeaderScreens) {
                 supportActionBar?.hide()
                 binding.appBarMain.appBarLayout.visibility = View.GONE
 
-                // Remove behavior to collapse the gap
+                // Remove behavior to collapse the gap so profile header bleeds directly behind status bar
                 val params =
                     binding.appBarMain.contentMain.root.layoutParams as CoordinatorLayout.LayoutParams
                 params.behavior = null
@@ -1422,8 +1425,31 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         val names = versionPairs.map { it.second }.toMutableList()
         names.add("Download More...")
 
-        val dialog = MaterialAlertDialogBuilder(this).setTitle("Select Version")
-            .setItems(names.toTypedArray()) { _, which ->
+        val toolbarColor = ThemeHelper.getEffectiveToolbarColor(this)
+        val fontColor = ThemeHelper.getEffectiveFontColor(this)
+        val primaryColor = ThemeHelper.getPrimaryColor(this)
+        val tbTextColor = ThemeHelper.getContrastingTextColor(toolbarColor, fontColor)
+        val selectedVersion = viewModel.currentVersion.value
+
+        val adapter = object : android.widget.ArrayAdapter<String>(this, android.R.layout.select_dialog_item, android.R.id.text1, names) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val v = super.getView(position, convertView, parent)
+                val tv = v.findViewById<TextView>(android.R.id.text1)
+                val isSelected = position < versionPairs.size && versionPairs[position].first.equals(selectedVersion, ignoreCase = true)
+                val isDownloadMore = position == names.size - 1
+
+                tv.setTextColor(if (isSelected) primaryColor else if (isDownloadMore) primaryColor else tbTextColor)
+                tv.typeface = if (isSelected) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT
+                val padH = (20 * resources.displayMetrics.density).toInt()
+                val padV = (14 * resources.displayMetrics.density).toInt()
+                tv.setPadding(padH, padV, padH, padV)
+                return v
+            }
+        }
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle("Select Version")
+            .setAdapter(adapter) { _, which ->
                 if (which == names.size - 1) {
                     showDownloadableVersionsDialog()
                 } else {
@@ -1433,11 +1459,21 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
                     }
                 }
             }.show()
+
+        val titleView = dialog.findViewById<TextView>(androidx.appcompat.R.id.alertTitle)
+        titleView?.setTextColor(tbTextColor)
+
         limitDialogWidth(dialog)
     }
 
     fun showDownloadableVersionsDialog() {
         BibleVersionDialog().show(supportFragmentManager, "BibleVersionDialog")
+    }
+
+    fun openDrawer() {
+        if (!binding.drawerLayout.isDrawerOpen(androidx.core.view.GravityCompat.START)) {
+            binding.drawerLayout.openDrawer(androidx.core.view.GravityCompat.START)
+        }
     }
 
     companion object {
@@ -1544,31 +1580,95 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
             aboutBinding.textAppVersion?.visibility = View.GONE
         }
         dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
-        aboutBinding.btnDeveloper?.setOnClickListener {
-            startActivity(
-                Intent(
-                    Intent.ACTION_VIEW,
-                    Uri.parse("https://api.whatsapp.com/send?phone=917005623762")
-                )
+
+        // Dynamic theme application for About Dialog
+        val toolbarColor = ThemeHelper.getEffectiveToolbarColor(this)
+        val cardColor = ThemeHelper.getEffectiveCardColor(this) ?: toolbarColor
+        val primaryColor = ThemeHelper.getPrimaryColor(this)
+        val fontColor = ThemeHelper.getEffectiveFontColor(this)
+        val iconColor = ThemeHelper.getEffectiveIconColor(this) ?: primaryColor
+        val isDark = ThemeHelper.isColorDark(cardColor)
+        val textColor = ThemeHelper.getContrastingTextColor(cardColor, fontColor)
+        val subtitleColor = ColorUtils.setAlphaComponent(textColor, 185)
+        val mutedColor = ColorUtils.setAlphaComponent(textColor, 140)
+        val density = resources.displayMetrics.density
+
+        // Card background and border
+        aboutBinding.cardAbout?.apply {
+            setCardBackgroundColor(cardColor)
+            strokeColor = if (isDark) Color.parseColor("#30FFFFFF") else ColorUtils.setAlphaComponent(primaryColor, 50)
+            strokeWidth = (1 * density).toInt()
+        }
+
+        // App logo: keep original full-color launcher icon
+        aboutBinding.imgAboutLogo?.let {
+            it.colorFilter = null
+            ImageViewCompat.setImageTintList(it, null)
+        }
+
+        // Texts
+        aboutBinding.textAboutTitle?.setTextColor(primaryColor)
+        aboutBinding.textAppVersion?.setTextColor(mutedColor)
+        aboutBinding.textAboutDescription?.setTextColor(textColor)
+        aboutBinding.textVerseRef?.setTextColor(primaryColor)
+        aboutBinding.textVerseContent?.setTextColor(textColor)
+        aboutBinding.dividerAbout?.setBackgroundColor(
+            if (isDark) Color.parseColor("#25FFFFFF") else ColorUtils.setAlphaComponent(textColor, 30)
+        )
+        aboutBinding.textContactHeader?.setTextColor(primaryColor)
+        aboutBinding.textContactDetails?.setTextColor(subtitleColor)
+
+        // Buttons
+        aboutBinding.btnDeveloper?.apply {
+            backgroundTintList = ColorStateList.valueOf(
+                if (isDark) ColorUtils.setAlphaComponent(primaryColor, 40)
+                else ColorUtils.setAlphaComponent(primaryColor, 25)
             )
+            setTextColor(primaryColor)
+            iconTint = ColorStateList.valueOf(primaryColor)
+            strokeColor = ColorStateList.valueOf(ColorUtils.setAlphaComponent(primaryColor, 70))
+            strokeWidth = (1 * density).toInt()
+        }
+
+        aboutBinding.btnWebsite?.setColorFilter(primaryColor)
+        aboutBinding.btnFacebook?.setColorFilter(primaryColor)
+        aboutBinding.btnInstagram?.setColorFilter(primaryColor)
+
+        aboutBinding.btnPrivacyPolicy?.setTextColor(primaryColor)
+
+        // Safe Click Handlers with crash prevention
+        fun safeOpenUrl(url: String) {
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                startActivity(intent)
+            } catch (e: Exception) {
+                try {
+                    val chooser = Intent.createChooser(Intent(Intent.ACTION_VIEW, Uri.parse(url)), "Hawngna thlang rawh")
+                    startActivity(chooser)
+                } catch (_: Exception) {
+                    Toast.makeText(this@MainActivity, "A hawng thei app a awm lo", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        aboutBinding.btnDeveloper?.setOnClickListener {
+            safeOpenUrl("https://api.whatsapp.com/send?phone=917005623762")
         }
         aboutBinding.btnWebsite?.setOnClickListener {
-            startActivity(
-                Intent(
-                    Intent.ACTION_VIEW,
-                    Uri.parse("https://khampat.com")
-                )
-            )
+            safeOpenUrl("https://khampat.com")
+        }
+        aboutBinding.btnFacebook?.setOnClickListener {
+            safeOpenUrl("https://www.facebook.com/khampatmedia")
+        }
+        aboutBinding.btnInstagram?.setOnClickListener {
+            safeOpenUrl("https://www.instagram.com/khampatmedia")
         }
         aboutBinding.btnPrivacyPolicy?.setOnClickListener {
-            startActivity(
-                Intent(
-                    Intent.ACTION_VIEW,
-                    Uri.parse("https://apps.khampat.com/mgb/privacy-policy")
-                )
-            )
+            safeOpenUrl("https://apps.khampat.com/mgb/privacy-policy")
         }
-        dialog.show(); limitDialogWidth(dialog, true)
+
+        dialog.show()
+        limitDialogWidth(dialog, true)
     }
 
     private fun setupFeedback() {
@@ -1628,8 +1728,31 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         val names = versionPairs.map { it.second }.toMutableList()
         names.add("Download More...")
 
-        val dialog = AlertDialog.Builder(this).setTitle("Select Parallel Version")
-            .setItems(names.toTypedArray()) { _, which ->
+        val toolbarColor = ThemeHelper.getEffectiveToolbarColor(this)
+        val fontColor = ThemeHelper.getEffectiveFontColor(this)
+        val primaryColor = ThemeHelper.getPrimaryColor(this)
+        val tbTextColor = ThemeHelper.getContrastingTextColor(toolbarColor, fontColor)
+        val selectedVersion = viewModel.splitVersion.value
+
+        val adapter = object : android.widget.ArrayAdapter<String>(this, android.R.layout.select_dialog_item, android.R.id.text1, names) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val v = super.getView(position, convertView, parent)
+                val tv = v.findViewById<TextView>(android.R.id.text1)
+                val isSelected = position < versionPairs.size && versionPairs[position].first.equals(selectedVersion, ignoreCase = true)
+                val isDownloadMore = position == names.size - 1
+
+                tv.setTextColor(if (isSelected) primaryColor else if (isDownloadMore) primaryColor else tbTextColor)
+                tv.typeface = if (isSelected) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT
+                val padH = (20 * resources.displayMetrics.density).toInt()
+                val padV = (14 * resources.displayMetrics.density).toInt()
+                tv.setPadding(padH, padV, padH, padV)
+                return v
+            }
+        }
+
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle("Select Parallel Version")
+            .setAdapter(adapter) { _, which ->
                 if (which < versionPairs.size) {
                     val original = versionPairs[which].first
                     viewModel.updateSplitVersion(original)
@@ -1640,7 +1763,12 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
                     switch?.isChecked = false
                 }
             }.setNegativeButton("Cancel") { _, _ -> switch?.isChecked = false }
-            .show(); limitDialogWidth(dialog)
+            .show()
+
+        val titleView = dialog.findViewById<TextView>(androidx.appcompat.R.id.alertTitle)
+        titleView?.setTextColor(tbTextColor)
+
+        limitDialogWidth(dialog)
     }
 
     fun limitDialogWidth(dialog: Dialog, useTransparentBackground: Boolean = false) {
@@ -1650,13 +1778,38 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
             val targetWidth =
                 if (dm.widthPixels > maxWidth) maxWidth else (dm.widthPixels * 0.95).toInt()
             setLayout(targetWidth, ViewGroup.LayoutParams.WRAP_CONTENT); setGravity(Gravity.CENTER)
-            if (useTransparentBackground) setBackgroundDrawableResource(android.R.color.transparent)
-            else {
-                val tv = TypedValue(); context.theme.resolveAttribute(
-                    com.google.android.material.R.attr.colorSurface,
-                    tv,
-                    true
-                ); setBackgroundDrawable(ColorDrawable(tv.data))
+            if (useTransparentBackground) {
+                setBackgroundDrawableResource(android.R.color.transparent)
+            } else {
+                val toolbarColor = ThemeHelper.getEffectiveToolbarColor(context)
+                val isDark = ThemeHelper.isColorDark(toolbarColor)
+                val cornerRadius = 24f * dm.density
+                val drawable = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.RECTANGLE
+                    this.cornerRadius = cornerRadius
+                    setColor(toolbarColor)
+                    setStroke(
+                        (1f * dm.density).toInt(),
+                        if (isDark) android.graphics.Color.parseColor("#30FFFFFF") else android.graphics.Color.parseColor("#15000000")
+                    )
+                }
+                setBackgroundDrawable(drawable)
+            }
+        }
+
+        if (!useTransparentBackground) {
+            val toolbarColor = ThemeHelper.getEffectiveToolbarColor(this)
+            val fontColor = ThemeHelper.getEffectiveFontColor(this)
+            val primaryColor = ThemeHelper.getPrimaryColor(this)
+            val tbTextColor = ThemeHelper.getContrastingTextColor(toolbarColor, fontColor)
+            val subtitleColor = ColorUtils.setAlphaComponent(tbTextColor, 200)
+
+            dialog.findViewById<TextView>(androidx.appcompat.R.id.alertTitle)?.setTextColor(tbTextColor)
+            dialog.findViewById<TextView>(android.R.id.message)?.setTextColor(subtitleColor)
+            if (dialog is androidx.appcompat.app.AlertDialog) {
+                dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)?.setTextColor(primaryColor)
+                dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE)?.setTextColor(primaryColor)
+                dialog.getButton(android.content.DialogInterface.BUTTON_NEUTRAL)?.setTextColor(primaryColor)
             }
         }
     }
@@ -1684,7 +1837,10 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         binding.appBarMain.toolbarSearchContainer.setBackgroundColor(toolbarColor)
 
         val isToolbarDark = ThemeHelper.isColorDark(toolbarColor)
-        androidx.core.view.WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = !isToolbarDark
+        val currentDestId = try { findNavController(R.id.nav_host_fragment_content_main).currentDestination?.id } catch (e: Exception) { null }
+        val isProfileScreen = currentDestId == R.id.nav_you
+        val lightStatusBars = if (isProfileScreen) false else !isToolbarDark
+        androidx.core.view.WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightStatusBars = lightStatusBars
         androidx.core.view.WindowInsetsControllerCompat(window, window.decorView).isAppearanceLightNavigationBars = !isToolbarDark
 
         val tbTextColor = ThemeHelper.getContrastingTextColor(toolbarColor, effectiveFontColor)
@@ -1702,6 +1858,11 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         binding.appBarMain.textToolbarFragmentTitle.setTextColor(tbTextColor)
         binding.appBarMain.textVersionSelector.setTextColor(tbTextColor)
         TextViewCompat.setCompoundDrawableTintList(binding.appBarMain.textVersionSelector, ColorStateList.valueOf(tbIconColor))
+        binding.appBarMain.textSplitVersionLabel.setTextColor(tbTextColor)
+        binding.appBarMain.textSplitVersionLabel.alpha = 1.0f
+        TextViewCompat.setCompoundDrawableTintList(binding.appBarMain.textSplitVersionLabel, ColorStateList.valueOf(tbIconColor))
+        binding.appBarMain.btnCloseParallel.setColorFilter(tbIconColor)
+        binding.appBarMain.btnCloseParallel.alpha = 1.0f
 
         val cardColor = ThemeHelper.getEffectiveCardColor(this)
 

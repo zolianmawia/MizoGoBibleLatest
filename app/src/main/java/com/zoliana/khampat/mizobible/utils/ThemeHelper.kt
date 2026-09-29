@@ -39,6 +39,7 @@ object ThemeHelper {
     const val KEY_CUSTOM_THEME_COLOR = "custom_theme_mode_color"
     const val KEY_TOOLBAR_COLOR = "custom_toolbar_color"
     const val KEY_CARD_COLOR = "custom_card_color"
+    const val KEY_THEME_OPACITY = "theme_opacity_level"
 
     // Bookmark Color Palette (Dal deuh / Soft Pastel tones)
     const val BOOKMARK_YELLOW = "#FFF59D" // Soft Butter / Pastel Yellow (Dal deuh)
@@ -400,18 +401,45 @@ object ThemeHelper {
         return getSelectedThemePreset(context).appColorId
     }
 
-    fun getPrimaryColor(context: Context): Int {
-        val preset = getSelectedThemePreset(context)
-        if (preset == ThemePreset.SYSTEM) {
+    fun getThemeOpacity(context: Context): Float {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        return prefs.getFloat(KEY_THEME_OPACITY, 0.0f).coerceIn(0.0f, 1.0f)
+    }
+
+    fun setThemeOpacity(context: Context, opacity: Float) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().putFloat(KEY_THEME_OPACITY, opacity.coerceIn(0.0f, 1.0f)).apply()
+    }
+
+    fun getPrimaryColorForPreset(
+        preset: ThemePreset,
+        context: Context,
+        opacity: Float = getThemeOpacity(context)
+    ): Int {
+        val baseColor = if (preset == ThemePreset.SYSTEM) {
             val isNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
                     Configuration.UI_MODE_NIGHT_YES
             return if (isNight) Color.parseColor("#90CAF9") else Color.parseColor("#1976D2")
+        } else {
+            try {
+                Color.parseColor(preset.primaryHex)
+            } catch (_: Exception) {
+                Color.parseColor("#1976D2")
+            }
         }
-        return try {
-            Color.parseColor(preset.primaryHex)
-        } catch (_: Exception) {
-            Color.parseColor("#1976D2")
+        val clampedOpacity = opacity.coerceIn(0f, 1f)
+        if (clampedOpacity <= 0.001f) return baseColor
+        val isNight = isCurrentThemeDark(context)
+        return if (isNight) {
+            adjustLightness(baseColor, clampedOpacity * 0.12f)
+        } else {
+            adjustLightness(baseColor, -clampedOpacity * 0.12f)
         }
+    }
+
+    fun getPrimaryColor(context: Context): Int {
+        val preset = getSelectedThemePreset(context)
+        return getPrimaryColorForPreset(preset, context)
     }
 
     fun setSelectedAppColor(context: Context, colorId: String) {
@@ -470,40 +498,54 @@ object ThemeHelper {
         return Color.HSVToColor(hsv)
     }
 
+    fun getEffectiveToolbarColorForPreset(preset: ThemePreset, context: Context, opacity: Float = getThemeOpacity(context)): Int {
+        val isSystemNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+                Configuration.UI_MODE_NIGHT_YES
+        val (baseHex, richHex) = when (preset) {
+            ThemePreset.SYSTEM -> if (isSystemNight) ("#222333" to "#0A0B10") else ("#FAF7F0" to "#D7CCC8")
+            ThemePreset.LIGHT -> ("#FAF7F0" to "#D7CCC8")
+            ThemePreset.NIGHT -> ("#222333" to "#0A0B10")
+            ThemePreset.RED -> ("#FFF0F2" to "#F48FB1")
+            ThemePreset.BLUE -> ("#EBF3FA" to "#90CAF9")
+            ThemePreset.GREEN -> ("#EDF7EE" to "#A5D6A7")
+            ThemePreset.YELLOW -> ("#FEF9E7" to "#FFE082")
+            ThemePreset.WHITE -> ("#FFFFFF" to "#E2E8F0")
+        }
+        val baseColor = Color.parseColor(baseHex)
+        val clampedOpacity = opacity.coerceIn(0f, 1f)
+        if (clampedOpacity <= 0.001f) return baseColor
+        val richColor = Color.parseColor(richHex)
+        return ColorUtils.blendARGB(baseColor, richColor, clampedOpacity)
+    }
+
+    fun getEffectiveCardColorForPreset(preset: ThemePreset, context: Context, opacity: Float = getThemeOpacity(context)): Int {
+        val isSystemNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
+                Configuration.UI_MODE_NIGHT_YES
+        val (baseHex, richHex) = when (preset) {
+            ThemePreset.SYSTEM -> if (isSystemNight) ("#2E2F45" to "#12131A") else ("#EBE2CF" to "#BCAAA4")
+            ThemePreset.LIGHT -> ("#EBE2CF" to "#BCAAA4")
+            ThemePreset.NIGHT -> ("#2E2F45" to "#12131A")
+            ThemePreset.RED -> ("#FCE4EC" to "#F06292")
+            ThemePreset.BLUE -> ("#DCEBF7" to "#64B5F6")
+            ThemePreset.GREEN -> ("#DCEDDD" to "#81C784")
+            ThemePreset.YELLOW -> ("#FBF0CB" to "#FFD54F")
+            ThemePreset.WHITE -> ("#F3F4F6" to "#CBD5E1")
+        }
+        val baseColor = Color.parseColor(baseHex)
+        val clampedOpacity = opacity.coerceIn(0f, 1f)
+        if (clampedOpacity <= 0.001f) return baseColor
+        val richColor = Color.parseColor(richHex)
+        return ColorUtils.blendARGB(baseColor, richColor, clampedOpacity)
+    }
+
     fun getEffectiveToolbarColor(context: Context): Int {
         val preset = getSelectedThemePreset(context)
-        return when (preset) {
-            ThemePreset.SYSTEM -> {
-                val isNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
-                        Configuration.UI_MODE_NIGHT_YES
-                if (isNight) Color.parseColor("#222333") else Color.parseColor("#FAF7F0")
-            }
-            ThemePreset.LIGHT -> Color.parseColor("#FAF7F0")
-            ThemePreset.NIGHT -> Color.parseColor("#222333")
-            ThemePreset.RED -> Color.parseColor("#FFF0F2")
-            ThemePreset.BLUE -> Color.parseColor("#EBF3FA")
-            ThemePreset.GREEN -> Color.parseColor("#EDF7EE")
-            ThemePreset.YELLOW -> Color.parseColor("#FEF9E7")
-            ThemePreset.WHITE -> Color.parseColor("#FFFFFF")
-        }
+        return getEffectiveToolbarColorForPreset(preset, context)
     }
 
     fun getEffectiveCardColor(context: Context): Int? {
         val preset = getSelectedThemePreset(context)
-        return when (preset) {
-            ThemePreset.SYSTEM -> {
-                val isNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
-                        Configuration.UI_MODE_NIGHT_YES
-                if (isNight) Color.parseColor("#2E2F45") else Color.parseColor("#EBE2CF")
-            }
-            ThemePreset.LIGHT -> Color.parseColor("#EBE2CF")
-            ThemePreset.NIGHT -> Color.parseColor("#2E2F45")
-            ThemePreset.RED -> Color.parseColor("#FCE4EC")
-            ThemePreset.BLUE -> Color.parseColor("#DCEBF7")
-            ThemePreset.GREEN -> Color.parseColor("#DCEDDD")
-            ThemePreset.YELLOW -> Color.parseColor("#FBF0CB")
-            ThemePreset.WHITE -> Color.parseColor("#F3F4F6")
-        }
+        return getEffectiveCardColorForPreset(preset, context)
     }
 
     fun getCustomIconColor(context: Context): String {
@@ -560,7 +602,13 @@ object ThemeHelper {
     }
 
     fun applyThemeToView(context: Context, view: View) {
-        if (view.id == R.id.dialog_theme_settings_root || view.id == R.id.dialog_font_settings_root || view.id == R.id.dialog_bible_versions_root) return
+        if (view.id == R.id.dialog_theme_settings_root ||
+            view.id == R.id.dialog_font_settings_root ||
+            view.id == R.id.dialog_bible_versions_root ||
+            view.id == R.id.dialog_about_root ||
+            view.id == R.id.split_divider_container ||
+            view.id == R.id.split_divider_line ||
+            view.id == R.id.split_handle) return
 
         val toolbarColor = getEffectiveToolbarColor(context)
         val bgColor = toolbarColor
@@ -595,7 +643,14 @@ object ThemeHelper {
         iconColor: Int?,
         insideCardDark: Boolean? = null
     ) {
-        if (view.id == R.id.dialog_theme_settings_root || view.id == R.id.dialog_font_settings_root || view.id == R.id.dialog_bible_versions_root || view.id == R.id.nav_view) return
+        if (view.id == R.id.dialog_theme_settings_root ||
+            view.id == R.id.dialog_font_settings_root ||
+            view.id == R.id.dialog_bible_versions_root ||
+            view.id == R.id.dialog_about_root ||
+            view.id == R.id.nav_view ||
+            view.id == R.id.split_divider_container ||
+            view.id == R.id.split_divider_line ||
+            view.id == R.id.split_handle) return
 
         var currentInsideCardDark = insideCardDark
 
@@ -643,8 +698,18 @@ object ThemeHelper {
             viewId == R.id.btn_done ||
             viewId == R.id.btn_apply_theme ||
             viewId == R.id.img_header_bg ||
+            viewId == R.id.img_profile_header ||
+            viewId == R.id.layout_profile_header_container ||
+            viewId == R.id.btn_profile_drawer ||
+            viewId == R.id.text_profile_toolbar_title ||
             viewId == R.id.text_header_title ||
-            viewId == R.id.text_header_subtitle) {
+            viewId == R.id.text_header_subtitle ||
+            viewId == R.id.split_handle ||
+            viewId == R.id.split_divider_line ||
+            viewId == R.id.split_divider_container ||
+            viewId == R.id.text_handle_icon ||
+            viewId == R.id.btn_parallel_line_close ||
+            viewId == R.id.text_parallel_line_version) {
             if ((viewId == R.id.btn_done || viewId == R.id.btn_apply_theme) && view is MaterialButton) {
                 view.setTextColor(Color.WHITE)
             }
@@ -653,7 +718,9 @@ object ThemeHelper {
 
         if (viewId == R.id.img_profile ||
             viewId == R.id.img_gold_badge ||
-            viewId == R.id.img_silver_badge) {
+            viewId == R.id.img_silver_badge ||
+            viewId == R.id.img_about_logo ||
+            viewId == R.id.img_profile_header) {
             if (view is ImageView) {
                 view.colorFilter = null
                 ImageViewCompat.setImageTintList(view, null)
@@ -665,12 +732,14 @@ object ThemeHelper {
             if (viewId == R.id.btn_reset_all) {
                 val ctx = view.context
                 val isDark = isCurrentThemeDark(ctx)
-                val deleteRed = if (isDark) Color.parseColor("#FF6B6B") else Color.parseColor("#D32F2F")
                 val cardColor = getEffectiveCardColor(ctx) ?: if (isDark) Color.parseColor("#2E2F45") else Color.parseColor("#FCE4EC")
+                val primaryColor = getPrimaryColor(ctx)
+                val textColor = getContrastingTextColor(cardColor, fontColor)
+                val effectiveIcon = iconColor ?: primaryColor
                 view.backgroundTintList = ColorStateList.valueOf(cardColor)
-                view.setTextColor(deleteRed)
-                view.iconTint = ColorStateList.valueOf(deleteRed)
-                view.strokeColor = ColorStateList.valueOf(ColorUtils.setAlphaComponent(deleteRed, if (isDark) 90 else 60))
+                view.setTextColor(textColor)
+                view.iconTint = ColorStateList.valueOf(effectiveIcon)
+                view.strokeColor = ColorStateList.valueOf(ColorUtils.setAlphaComponent(primaryColor, if (isDark) 90 else 60))
                 view.strokeWidth = (1.5f * ctx.resources.displayMetrics.density).toInt()
                 return
             }
@@ -724,7 +793,8 @@ object ThemeHelper {
                 if (viewId != R.id.img_header_bg &&
                     viewId != R.id.img_profile &&
                     viewId != R.id.img_gold_badge &&
-                    viewId != R.id.img_silver_badge) {
+                    viewId != R.id.img_silver_badge &&
+                    viewId != R.id.img_about_logo) {
                     ImageViewCompat.setImageTintList(view, ColorStateList.valueOf(iconColor))
                     view.setColorFilter(iconColor)
                 }

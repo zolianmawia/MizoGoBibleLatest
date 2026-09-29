@@ -62,6 +62,7 @@ class BibleVersionDialog : BottomSheetDialogFragment() {
                 val behavior = BottomSheetBehavior.from(it)
                 behavior.state = BottomSheetBehavior.STATE_EXPANDED
                 behavior.skipCollapsed = true
+                it.setBackgroundResource(android.R.color.transparent)
 
                 val width = resources.displayMetrics.widthPixels
                 val tabletWidth = (600 * resources.displayMetrics.density).toInt()
@@ -104,8 +105,11 @@ class BibleVersionDialog : BottomSheetDialogFragment() {
             setColor(bgColor)
         }
         view.background = dialogBg
+        binding.dialogBibleVersionsRoot.background = dialogBg
+        binding.rvVersions.setBackgroundColor(bgColor)
 
         val titleColor = ThemeHelper.getContrastingTextColor(bgColor, fontColor ?: primaryColor)
+        binding.dialogHandle?.setBackgroundColor(androidx.core.graphics.ColorUtils.setAlphaComponent(titleColor, 50))
         binding.textVersionsTitle.setTextColor(titleColor)
         binding.btnDeleteSelected.setColorFilter(iconColor)
 
