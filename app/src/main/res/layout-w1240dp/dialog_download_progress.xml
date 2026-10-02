@@ -1,16 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/card_download_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     app:cardCornerRadius="16dp"
     app:cardElevation="8dp">
 
     <LinearLayout
+        android:id="@+id/layout_download_body"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:background="?attr/colorSurface">
+        android:background="@android:color/transparent">
 
         <!-- Header with buttons - Added ID for dragging -->
         <RelativeLayout
@@ -59,6 +61,7 @@
         </RelativeLayout>
 
         <View
+            android:id="@+id/view_download_divider"
             android:layout_width="match_parent"
             android:layout_height="1dp"
             android:background="?attr/colorOutlineVariant"

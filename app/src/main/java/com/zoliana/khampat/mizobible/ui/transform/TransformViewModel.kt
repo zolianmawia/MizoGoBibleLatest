@@ -22,6 +22,7 @@ import com.zoliana.khampat.mizobible.data.Note
 import com.zoliana.khampat.mizobible.data.Pin
 import com.zoliana.khampat.mizobible.data.ReadingLog
 import com.zoliana.khampat.mizobible.utils.ThemeHelper
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
@@ -30,12 +31,15 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 
 class TransformViewModel(
     val repository: BibleRepository,
@@ -55,6 +59,13 @@ class TransformViewModel(
     private val _goldMembers = MutableStateFlow<List<MemberInfo>>(emptyList())
     val goldMembers: StateFlow<List<MemberInfo>> = _goldMembers
 
+    sealed class UiEvent {
+        object ShowUpgradeDialog : UiEvent()
+    }
+
+    private val _uiEvent = MutableSharedFlow<UiEvent>()
+    val uiEvent = _uiEvent.asSharedFlow()
+
     private var premiumListener: ListenerRegistration? = null
     private var isDownloadingFromCloud = false
 
@@ -69,6 +80,19 @@ class TransformViewModel(
 
     private val _isVerticalSplit = MutableStateFlow(prefs.getBoolean("vertical_split", true))
     val isVerticalSplit: StateFlow<Boolean> = _isVerticalSplit
+
+    val splitRatio = MutableStateFlow(prefs.getFloat("split_ratio", 0.5f))
+
+    fun updateSplitRatio(ratio: Float) {
+        splitRatio.value = ratio
+        prefs.edit().putFloat("split_ratio", ratio).apply()
+    }
+
+    fun toggleSplitOrientation() {
+        val newVal = !_isVerticalSplit.value
+        _isVerticalSplit.value = newVal
+        prefs.edit().putBoolean("vertical_split", newVal).apply()
+    }
 
     val fontSettings = MutableStateFlow<FontSettings>(loadFontSettings())
     val highlightVerseId = MutableStateFlow<Int?>(null)
@@ -153,33 +177,69 @@ class TransformViewModel(
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val splitBibleVerses: LiveData<List<BibleVerse>> =
-        combine(splitVersion, currentBook, currentChapter) { v, b, c -> Triple(v, b, c) }
-            .flatMapLatest { (sVersion, book, chapter) ->
-                val masterFlow = repository.getVerses("MzOV", book, chapter)
-                val otherFlow =
-                    repository.getVerses(sVersion, getTranslatedBookName(book, sVersion), chapter)
-                masterFlow.combine(otherFlow) { masterList, otherList ->
-                    if (masterList.isEmpty() || sVersion.lowercase() == "mzov") return@combine otherList
-                    val aligned = mutableListOf<BibleVerse>()
-                    val otherMap =
-                        otherList.groupBy { it.verse }
-                    masterList.forEach { m ->
-                        if (m.verse == "0") aligned.add(
-                            otherMap["0"]?.firstOrNull() ?: BibleVerse(
-                                id = -1,
-                                type = "placeholder",
-                                book = book,
-                                chapter = chapter,
-                                verse = "0",
-                                text = "",
-                                normalizedText = ""
-                            )
-                        )
-                        else otherMap[m.verse]?.let { aligned.addAll(it) }
+        combine(splitVersion, currentVersion, currentBook, currentChapter) { sv, cv, b, c ->
+            Triple(sv, cv, b to c)
+        }.flatMapLatest { (sVersion, cVersion, bookChapter) ->
+            val (book, chapter) = bookChapter
+            
+            val masterBook = getTranslatedBookName(book, cVersion)
+            
+            // Master flow is the current version
+            val masterFlow = repository.getVerses(cVersion, masterBook, chapter)
+            
+            masterFlow.flatMapLatest { masterList ->
+                // Try getting verses for other version with translated name
+                val otherBook = getTranslatedBookName(book, sVersion)
+                val otherFlowTranslated = repository.getVerses(sVersion, otherBook, chapter)
+                
+                otherFlowTranslated.flatMapLatest { otherListTranslated ->
+                    // If empty and names are different, try original name
+                    val finalOtherFlow = if (otherListTranslated.isEmpty() && !otherBook.equals(book, ignoreCase = true)) {
+                        repository.getVerses(sVersion, book, chapter)
+                    } else {
+                        kotlinx.coroutines.flow.flowOf(otherListTranslated)
                     }
-                    if (aligned.isEmpty()) otherList else aligned
+                    
+                    finalOtherFlow.map { otherList ->
+                        if (sVersion.equals(cVersion, ignoreCase = true)) {
+                            return@map otherList
+                        }
+                        if (masterList.isEmpty()) {
+                            return@map otherList
+                        }
+
+                        val aligned = mutableListOf<BibleVerse>()
+                        val otherMap = otherList.groupBy { it.verse?.trim() ?: "0" }
+                        
+                        masterList.forEach { m ->
+                            val mVerseNum = m.verse?.trim() ?: "0"
+                            if (mVerseNum == "0") {
+                                val matchingOther = otherMap["0"]?.firstOrNull()
+                                aligned.add(matchingOther ?: m.copy(type = "pericope", text = "", id = -1))
+                            } else {
+                                val matches = otherMap[mVerseNum]
+                                if (!matches.isNullOrEmpty()) {
+                                    aligned.addAll(matches)
+                                } else {
+                                    aligned.add(
+                                        BibleVerse(
+                                            id = -2,
+                                            type = "missing",
+                                            book = book,
+                                            chapter = chapter,
+                                            verse = mVerseNum,
+                                            text = "[...]",
+                                            normalizedText = ""
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                        if (aligned.isEmpty() && otherList.isNotEmpty()) otherList else aligned
+                    }
                 }
-            }.asLiveData()
+            }
+        }.asLiveData()
 
     init {
         val savedType =
@@ -538,8 +598,8 @@ class TransformViewModel(
         val savedFamily = prefs.getString("font_family", "Serif") ?: "Serif"
         // Upgrade legacy "Times New Roman" setting which lacked Mizo ṭ/Ṭ glyphs
         val safeFamily = if (savedFamily == "Times New Roman") "Serif" else savedFamily
-        val savedLineHeight = prefs.getFloat("line_height", 1.3f)
-        val safeLineHeight = if (savedLineHeight <= 1.05f) 1.3f else savedLineHeight
+        val savedLineHeight = prefs.getFloat("line_height", 0.20f)
+        val safeLineHeight = savedLineHeight.coerceIn(-0.50f, 2.50f)
         val effectiveColor = ThemeHelper.getFontColor(getApplication())
 
         return FontSettings(
@@ -741,6 +801,13 @@ class TransformViewModel(
 
     fun toggleBookmark(bookmark: Bookmark) {
         viewModelScope.launch {
+            if (membershipType.value == MembershipType.FREE) {
+                val currentCount = allBookmarks.value?.size ?: 0
+                if (currentCount >= 10) {
+                    _uiEvent.emit(UiEvent.ShowUpgradeDialog)
+                    return@launch
+                }
+            }
             repository.insertBookmark(bookmark); syncToCloud()
         }
     }
@@ -753,6 +820,13 @@ class TransformViewModel(
 
     fun addPin(pin: Pin) {
         viewModelScope.launch {
+            if (membershipType.value == MembershipType.FREE) {
+                val currentCount = allPins.value?.size ?: 0
+                if (currentCount >= 10) {
+                    _uiEvent.emit(UiEvent.ShowUpgradeDialog)
+                    return@launch
+                }
+            }
             repository.insertPin(pin); syncToCloud()
         }
     }
@@ -765,6 +839,13 @@ class TransformViewModel(
 
     fun saveNote(note: Note) {
         viewModelScope.launch {
+            if (membershipType.value == MembershipType.FREE) {
+                val currentCount = allNotes.value?.size ?: 0
+                if (currentCount >= 10) {
+                    _uiEvent.emit(UiEvent.ShowUpgradeDialog)
+                    return@launch
+                }
+            }
             repository.insertNote(note); syncToCloud()
         }
     }
@@ -799,16 +880,38 @@ class TransformViewModel(
 
     private fun getTranslatedBookName(book: String, version: String): String {
         val v = version.lowercase().trim()
-        val isEnglishVersion = listOf("kjv", "niv", "asv", "greek (grk)").contains(v)
-        if (isEnglishVersion) return bookMapping[book] ?: book
-        if (v == "banglaov" || v == "bangla") {
+        val isEnglish = listOf("kjv", "niv", "asv", "greek (grk)").contains(v)
+        val isBangla = v == "banglaov" || v == "bangla"
+        
+        if (isBangla) {
             return when (book.trim()) {
-                "Josua-I" -> "Josua"
-                "Ṭah hla" -> "Ṭahhla"
+                "Josua-I", "Josua" -> "Josua"
+                "Ṭah hla", "Tah hla" -> "Ṭahhla"
                 else -> book
             }
         }
-        return book
+
+        // Normalize input for searching
+        val normInput = normalizeForMapping(book)
+        
+        // Find best match in our mapping
+        val entry = bookMapping.entries.find { 
+            normalizeForMapping(it.key) == normInput || normalizeForMapping(it.value) == normInput 
+        }
+
+        return if (entry != null) {
+            if (isEnglish) entry.value else entry.key
+        } else {
+            book
+        }
+    }
+
+    private fun normalizeForMapping(s: String): String {
+        return s.trim().lowercase(Locale.ROOT)
+            .replace("[áàâ]".toRegex(), "a").replace("[éèê]".toRegex(), "e")
+            .replace("[íìî]".toRegex(), "i").replace("[óòô]".toRegex(), "o")
+            .replace("[úùû]".toRegex(), "u").replace("ṭ", "t")
+            .replace("[^a-z0-9]".toRegex(), "")
     }
 
     private val bookMapping = mapOf(
@@ -818,15 +921,22 @@ class TransformViewModel(
         "Numbers" to "Numbers",
         "Deuteronomy" to "Deuteronomy",
         "Josua-I" to "Joshua",
+        "Josua" to "Joshua",
         "Joshua" to "Joshua",
         "Roreltute" to "Judges",
         "Ruthi" to "Ruth",
         "I - Samuela" to "1 Samuel",
+        "1 Samuel" to "1 Samuel",
         "II - Samuela" to "2 Samuel",
+        "2 Samuel" to "2 Samuel",
         "I - Lalte" to "1 Kings",
+        "1 Kings" to "1 Kings",
         "II - Lalte" to "2 Kings",
+        "2 Kings" to "2 Kings",
         "I - Chronicles" to "1 Chronicles",
+        "1 Chronicles" to "1 Chronicles",
         "II - Chronicles" to "2 Chronicles",
+        "2 Chronicles" to "2 Chronicles",
         "EZRA" to "Ezra",
         "Nehemia" to "Nehemiah",
         "Estheri" to "Esther",
@@ -835,9 +945,11 @@ class TransformViewModel(
         "Thufingte" to "Proverbs",
         "Thuhriltu" to "Ecclesiastes",
         "Hla Thlan Khawmte" to "Song of Solomon",
+        "Hla Thlankhawmte" to "Song of Solomon",
         "Isaia" to "Isaiah",
         "Jeremia" to "Jeremiah",
         "Ṭah hla" to "Lamentations",
+        "Tah hla" to "Lamentations",
         "Ezekiela" to "Ezekiel",
         "Daniela" to "Daniel",
         "Hosea" to "Hosea",

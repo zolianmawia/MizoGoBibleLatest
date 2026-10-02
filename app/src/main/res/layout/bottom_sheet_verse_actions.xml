@@ -199,6 +199,7 @@
             android:focusable="true"
             android:contentDescription="Pin Activity" />
     </LinearLayout>
+    
 
     <!-- Bottom Actions Row -->
     <LinearLayout

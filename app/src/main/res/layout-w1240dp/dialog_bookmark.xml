@@ -7,6 +7,7 @@
     android:fillViewport="true">
 
     <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_bookmark_dialog"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
@@ -67,10 +68,11 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_bookmark_note"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:hint="I bookmark chhan ziak rawh (Optional)..."
+                android:hint="I bookmark chhan ziak raw (Optional)..."
                 style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
 
                 <com.google.android.material.textfield.TextInputEditText
@@ -163,7 +165,9 @@
                     style="@style/Widget.MaterialComponents.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Cancel" />
+                    android:text="Cancel"
+                    android:textStyle="bold"
+                    android:textSize="14.5sp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSave"

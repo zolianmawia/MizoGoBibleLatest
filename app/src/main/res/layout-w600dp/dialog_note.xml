@@ -130,6 +130,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Cancel"
+                android:textStyle="bold"
+                android:textSize="14.5sp"
                 android:textColor="?attr/colorOnSurface" />
 
             <com.google.android.material.button.MaterialButton

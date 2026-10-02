@@ -38,6 +38,8 @@ class SelectPassageFragment : Fragment() {
         }
 
         // Setup Toolbar
+        binding.appBarLayout.stateListAnimator = null
+        binding.appBarLayout.outlineProvider = null
         binding.toolbar.setNavigationOnClickListener {
             // Handle close button click, e.g., dismiss the fragment/dialog
             parentFragmentManager.popBackStack()

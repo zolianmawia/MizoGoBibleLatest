@@ -2,8 +2,16 @@ package com.zoliana.khampat.mizobible.ui.transform
 
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.ColorFilter
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PixelFormat
+import android.graphics.RectF
 import android.graphics.Typeface
+import android.graphics.drawable.Drawable
+import android.graphics.drawable.GradientDrawable
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
@@ -15,6 +23,9 @@ import android.view.Gravity
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
+import android.widget.RelativeLayout
+import android.widget.TextView
 import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
@@ -92,6 +103,28 @@ fun setPins(pins: List<Pin>) {
         notifyDataSetChanged()
     }
 
+    private fun getVerseBgColor(
+        position: Int,
+        effectiveVerseBg: Int,
+        defaultBookmarkColor: Int,
+        selectionColor: Int
+    ): Int {
+        if (position < 0 || position >= currentList.size) return Color.TRANSPARENT
+        val v = getItem(position)
+        val vId = v.id ?: 0
+        if (v.verse == "0" || v.type == "placeholder") return Color.TRANSPARENT
+        if (selectedVerses.contains(vId)) return selectionColor
+
+        val bm = bookmarks.find {
+            it.verseId == vId || isMatch(v.book, it.book, v.chapter, it.chapter, v.verse, it.verse.toString())
+        }
+        if (bm != null) {
+            val rawColor = bm.color.takeIf { it.isNotBlank() } ?: ThemeHelper.BOOKMARK_YELLOW
+            return ThemeHelper.getSoftBookmarkColor(rawColor, effectiveVerseBg)
+        }
+        return Color.TRANSPARENT
+    }
+
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VerseViewHolder {
         val binding = ItemBibleVerseBinding.inflate(
             LayoutInflater.from(parent.context),
@@ -106,7 +139,307 @@ fun setPins(pins: List<Pin>) {
         val vId = verse.id ?: 0
         val isSelected = selectedVerses.contains(vId)
 
-        // Matching logic robust leh zual nan (Book name normalization)
+        val context = holder.itemView.context
+        val effectiveVerseBg = ThemeHelper.getEffectiveToolbarColor(context)
+        val typedValue = TypedValue()
+        val theme = context.theme
+        val selectionColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)) typedValue.data else Color.parseColor("#FFE0B2")
+        val defaultBookmarkColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true)) typedValue.data else Color.parseColor("#FFF9C4")
+
+        val normalBgColor = getVerseBgColor(position, effectiveVerseBg, defaultBookmarkColor, selectionColor)
+        val prevBgColor = getVerseBgColor(position - 1, effectiveVerseBg, defaultBookmarkColor, selectionColor)
+        val nextBgColor = getVerseBgColor(position + 1, effectiveVerseBg, defaultBookmarkColor, selectionColor)
+
+        val isPrevSame = normalBgColor != Color.TRANSPARENT && prevBgColor == normalBgColor
+        val isNextSame = normalBgColor != Color.TRANSPARENT && nextBgColor == normalBgColor
+
+        val pin = pins.find {
+            it.verseId == vId || isMatch(verse.book, it.book, verse.chapter, it.chapter, verse.verse, it.verse.toString())
+        }
+
+        val bookmark = bookmarks.find {
+            it.verseId == vId || isMatch(verse.book, it.book, verse.chapter, it.chapter, verse.verse, it.verse.toString())
+        }
+
+        // Highlight matching logic
+        val isIdMatch = vId != 0 && vId == highlightId
+        val isNumMatch = highlightVerseNumber != null && getVerseNum(verse.verse) == getVerseNum(highlightVerseNumber)
+        val shouldHighlight = isIdMatch || isNumMatch
+
+        holder.bind(
+            verse,
+            fontSettings,
+            isSelected,
+            pin,
+            bookmark,
+            null,
+            shouldHighlight,
+            membershipType,
+            sidePadding,
+            normalBgColor,
+            isPrevSame,
+            isNextSame,
+            onVerseClick
+        )
+    }
+
+    class VerseViewHolder(private val binding: ItemBibleVerseBinding) :
+        RecyclerView.ViewHolder(binding.root) {
+
+        private var bgAnimator: ValueAnimator? = null
+
+        fun bind(
+            verse: BibleVerse,
+            settings: FontSettings,
+            isSelected: Boolean,
+            pin: Pin?,
+            bookmark: Bookmark?,
+            note: Note?,
+            shouldHighlight: Boolean,
+            membershipType: MembershipType,
+            sidePadding: Float,
+            normalBgColor: Int,
+            isPrevSame: Boolean,
+            isNextSame: Boolean,
+            onClick: (BibleVerse, View) -> Unit
+        ) {
+
+            bgAnimator?.cancel()
+            val isHeading = verse.verse == "0"
+            val isPlaceholder = verse.type == "placeholder"
+            val density = binding.root.resources.displayMetrics.density
+            val isHighlighted = normalBgColor != Color.TRANSPARENT
+
+            if (isHeading) {
+                binding.textVerseNumber.visibility = View.GONE
+                binding.textVerseContent.gravity = Gravity.CENTER
+                val basePadding = (16 * density).toInt()
+                binding.layoutVerseMain.setPadding(basePadding, 48, basePadding, 24)
+                binding.root.setPadding(0, 0, 0, 0)
+            } else {
+                binding.textVerseNumber.visibility = View.GONE
+                binding.textVerseContent.gravity = Gravity.START
+                val hPadding = ((sidePadding + if (isHighlighted) 8f else 4f) * density).toInt()
+                val vPadding = ((if (isHighlighted) 6f else 4f) * density).toInt()
+                binding.layoutVerseMain.setPadding(hPadding, vPadding, hPadding, vPadding)
+
+                val rootHPadding = (4 * density).toInt()
+                val rootTopPadding = (if (isPrevSame) 0f else 1.5f * density).toInt()
+                val rootBottomPadding = (if (isNextSame) 0f else 1.5f * density).toInt()
+                binding.root.setPadding(rootHPadding, rootTopPadding, rootHPadding, rootBottomPadding)
+            }
+
+            if (isPlaceholder) {
+                binding.textVerseContent.text = ""
+                binding.root.setOnClickListener(null)
+                binding.root.setBackgroundColor(Color.TRANSPARENT)
+                binding.imgPinIndicator.visibility = View.GONE
+                return
+            }
+
+            val baseSize = if (settings.fontSize < 12f) 18f else settings.fontSize
+            if (isHeading) binding.textVerseContent.setTextSize(TypedValue.COMPLEX_UNIT_SP, baseSize + 2f) else binding.textVerseContent.setTextSize(TypedValue.COMPLEX_UNIT_SP, baseSize)
+
+            val style = if (isHeading) Typeface.BOLD else when {
+                settings.isBold && settings.isItalic -> Typeface.BOLD_ITALIC; settings.isBold -> Typeface.BOLD; settings.isItalic -> Typeface.ITALIC; else -> Typeface.NORMAL
+            }
+
+            val tf = try {
+                when (settings.fontFamily) {
+                    "Default" -> Typeface.create(Typeface.DEFAULT, style)
+                    "Sans Serif" -> Typeface.create(Typeface.SANS_SERIF, style)
+                    "Serif", "Times New Roman" -> Typeface.create(Typeface.SERIF, style)
+                    "Monospace" -> Typeface.create(Typeface.MONOSPACE, style)
+                    else -> {
+                        val extensions = listOf(".ttf", ".otf")
+                        var assetTf: Typeface? = null
+                        for (ext in extensions) {
+                            try {
+                                assetTf = Typeface.createFromAsset(binding.root.context.assets, "fonts/${settings.fontFamily}$ext")
+                                break
+                            } catch (e: Exception) { }
+                        }
+                        if (assetTf != null) Typeface.create(assetTf, style) else Typeface.create(Typeface.SERIF, style)
+                    }
+                }
+            } catch (e: Exception) {
+                Typeface.create(Typeface.SERIF, style)
+            }
+
+            binding.textVerseContent.typeface = tf
+            binding.textVerseContent.letterSpacing = settings.letterSpacing
+            val mult = (1.0f + settings.lineHeight * 0.7f).coerceIn(0.65f, 2.5f)
+            val add = (settings.lineHeight * 2f * density).coerceIn(-3f * density, 6f * density)
+            binding.textVerseContent.setLineSpacing(add, mult)
+
+            val verseNum = verse.verse ?: ""
+            val rawText = verse.text ?: ""
+            val fullText = if (isHeading || verseNum == "0") rawText else "$verseNum $rawText"
+            val spannable = SpannableString(fullText)
+
+            val typedValue = TypedValue()
+            val theme = binding.root.context.theme
+            
+            // Base text colors: Guaranteed contrast with effective verse background
+            val context = binding.root.context
+            val customFontColor = try {
+                if (settings.fontColor.isNotBlank() && settings.fontColor != "default") {
+                    Color.parseColor(settings.fontColor)
+                } else null
+            } catch (e: Exception) { null }
+            val effectiveVerseBg = ThemeHelper.getEffectiveToolbarColor(context)
+            val effectiveTextColor = ThemeHelper.getContrastingTextColor(effectiveVerseBg, customFontColor)
+            val textColor = effectiveTextColor
+            
+            val rawPrimary = if (theme.resolveAttribute(androidx.appcompat.R.attr.colorPrimary, typedValue, true)) typedValue.data else Color.parseColor("#1976D2")
+            val primaryColor = ThemeHelper.getContrastingVerseNumberColor(effectiveVerseBg, rawPrimary)
+            val selectionColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)) typedValue.data else Color.parseColor("#FFE0B2")
+            val defaultBookmarkColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true)) typedValue.data else Color.parseColor("#FFF9C4")
+
+            if (!isHeading && verseNum != "0" && verseNum.isNotEmpty()) {
+                val end = verseNum.length
+                spannable.setSpan(ForegroundColorSpan(primaryColor), 0, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                spannable.setSpan(RelativeSizeSpan(0.85f), 0, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                spannable.setSpan(StyleSpan(Typeface.BOLD), 0, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+                spannable.setSpan(SuperscriptSpan(), 0, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+
+            val hPadding = ((sidePadding + if (isHighlighted) 8f else 4f) * density).toInt()
+            val vPadding = ((if (isHighlighted) 6f else 4f) * density).toInt()
+            val rootHPadding = (4 * density).toInt()
+
+            val mainLp = binding.layoutVerseMain.layoutParams as? RelativeLayout.LayoutParams
+                ?: RelativeLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            val textLp = binding.textVerseContent.layoutParams as? LinearLayout.LayoutParams
+                ?: LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+
+            if (isHeading) {
+                mainLp.width = RelativeLayout.LayoutParams.MATCH_PARENT
+                textLp.width = LinearLayout.LayoutParams.MATCH_PARENT
+                textLp.weight = 0f
+                binding.textVerseNumber.visibility = View.GONE
+                binding.textVerseContent.gravity = Gravity.CENTER
+                val basePadding = (16 * density).toInt()
+                binding.layoutVerseMain.setPadding(basePadding, 48, basePadding, 24)
+                binding.root.setPadding(0, 0, 0, 0)
+            } else {
+                mainLp.width = RelativeLayout.LayoutParams.MATCH_PARENT
+                textLp.width = 0
+                textLp.weight = 1f
+                binding.textVerseNumber.visibility = View.GONE
+                binding.textVerseContent.gravity = Gravity.START
+                binding.layoutVerseMain.setPadding(hPadding, vPadding, hPadding, vPadding)
+
+                val rootTopPadding = if (isPrevSame) 0 else (1.5f * density).toInt()
+                val rootBottomPadding = if (isNextSame) 0 else (1.5f * density).toInt()
+                binding.root.setPadding(rootHPadding, rootTopPadding, rootHPadding, rootBottomPadding)
+            }
+            binding.layoutVerseMain.layoutParams = mainLp
+            binding.textVerseContent.layoutParams = textLp
+
+            val contentStart = if (isHeading || verseNum == "0") 0 else verseNum.length + 1
+            if (pin != null && contentStart < spannable.length) {
+                val pinColor = try { Color.parseColor(pin.color) } catch (e: Exception) { Color.RED }
+                spannable.setSpan(WavyUnderlineSpan(pinColor), contentStart, spannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+
+            val isBookmarked = bookmark != null
+
+            val finalTextColor = if (isHighlighted) {
+                ThemeHelper.getContrastingTextColor(normalBgColor, customFontColor)
+            } else {
+                textColor
+            }
+
+            if (isHighlighted && !isHeading && verseNum != "0" && verseNum.isNotEmpty()) {
+                val highlightedVNumColor = ThemeHelper.getContrastingVerseNumberColor(normalBgColor, rawPrimary)
+                spannable.setSpan(ForegroundColorSpan(highlightedVNumColor), 0, verseNum.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+            }
+
+            binding.textVerseContent.text = spannable
+            binding.textVerseContent.setTextColor(finalTextColor)
+
+            binding.root.background = null
+
+            if (shouldHighlight) {
+                val baseColor = if (isHighlighted) normalBgColor else Color.TRANSPARENT
+                val highlightDrawable = (binding.layoutVerseMain.background as? VerseHighlightDrawable)
+                    ?: VerseHighlightDrawable(
+                        textView = binding.textVerseContent,
+                        hasPin = { binding.imgPinIndicator.visibility == View.VISIBLE },
+                        color = baseColor,
+                        isPrevSame = isPrevSame,
+                        isNextSame = isNextSame,
+                        density = density,
+                        isHeading = isHeading
+                    ).also {
+                        binding.layoutVerseMain.background = it
+                    }
+
+                highlightDrawable.setColorValue(baseColor)
+                highlightDrawable.isPrevSame = isPrevSame
+                highlightDrawable.isNextSame = isNextSame
+                binding.textVerseContent.post { binding.layoutVerseMain.invalidate() }
+
+                bgAnimator = ValueAnimator.ofObject(ArgbEvaluator(), baseColor, Color.parseColor("#80FF0000")).apply {
+                    duration = 500
+                    repeatCount = 7
+                    repeatMode = ValueAnimator.REVERSE
+                    addUpdateListener { animator ->
+                        highlightDrawable.setColorValue(animator.animatedValue as Int)
+                    }
+                    start()
+                }
+            } else {
+                if (isHighlighted) {
+                    val highlightDrawable = (binding.layoutVerseMain.background as? VerseHighlightDrawable)
+                        ?: VerseHighlightDrawable(
+                            textView = binding.textVerseContent,
+                            hasPin = { binding.imgPinIndicator.visibility == View.VISIBLE },
+                            color = normalBgColor,
+                            isPrevSame = isPrevSame,
+                            isNextSame = isNextSame,
+                            density = density,
+                            isHeading = isHeading
+                        ).also {
+                            binding.layoutVerseMain.background = it
+                        }
+                    highlightDrawable.setColorValue(normalBgColor)
+                    highlightDrawable.isPrevSame = isPrevSame
+                    highlightDrawable.isNextSame = isNextSame
+                    binding.layoutVerseMain.background = highlightDrawable
+                    binding.textVerseContent.post { binding.layoutVerseMain.invalidate() }
+                } else {
+                    binding.layoutVerseMain.background = null
+                }
+            }
+
+            if (pin != null) {
+                binding.imgPinIndicator.visibility = View.VISIBLE
+                try {
+                    binding.imgPinIndicator.setColorFilter(Color.parseColor(pin.color))
+                } catch (e: Exception) {
+                    binding.imgPinIndicator.setColorFilter(Color.RED)
+                }
+            } else {
+                binding.imgPinIndicator.visibility = View.GONE
+            }
+
+            binding.root.setOnClickListener { onClick(verse, binding.root) }
+        }
+
+        private fun isColorDark(color: Int): Boolean {
+            val darkness = 1 - (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255.0
+            return darkness >= 0.5
+        }
+    }
+
+    class VerseDiffCallback : DiffUtil.ItemCallback<BibleVerse>() {
+        override fun areItemsTheSame(oldItem: BibleVerse, newItem: BibleVerse): Boolean = oldItem.id == newItem.id
+        override fun areContentsTheSame(oldItem: BibleVerse, newItem: BibleVerse): Boolean = oldItem == newItem
+    }
+
+    companion object {
         fun normalize(s: String?): String {
             if (s == null) return ""
             return s.trim().lowercase(Locale.ROOT)
@@ -145,215 +478,5 @@ fun setPins(pins: List<Pin>) {
             val b2 = bookRef(itemBook)
             return b1 == b2 || (b1.length >= 3 && b2.length >= 3 && (b1.startsWith(b2.substring(0, 3)) || b2.startsWith(b1.substring(0, 3))))
         }
-
-        val pin = pins.find {
-            it.verseId == vId || isMatch(verse.book, it.book, verse.chapter, it.chapter, verse.verse, it.verse.toString())
-        }
-
-        val bookmark = bookmarks.find {
-            it.verseId == vId || isMatch(verse.book, it.book, verse.chapter, it.chapter, verse.verse, it.verse.toString())
-        }
-
-        // Highlight matching logic
-        val isIdMatch = vId != 0 && vId == highlightId
-        val isNumMatch = highlightVerseNumber != null && getVerseNum(verse.verse) == getVerseNum(highlightVerseNumber)
-        val shouldHighlight = isIdMatch || isNumMatch
-
-        holder.bind(
-            verse,
-            fontSettings,
-            isSelected,
-            pin,
-            bookmark,
-            null,
-            shouldHighlight,
-            membershipType,
-            sidePadding,
-            onVerseClick
-        )
-    }
-
-    class VerseViewHolder(private val binding: ItemBibleVerseBinding) :
-        RecyclerView.ViewHolder(binding.root) {
-
-        private var bgAnimator: ValueAnimator? = null
-
-        fun bind(
-            verse: BibleVerse,
-            settings: FontSettings,
-            isSelected: Boolean,
-            pin: Pin?,
-            bookmark: Bookmark?,
-            note: Note?,
-            shouldHighlight: Boolean,
-            membershipType: MembershipType,
-            sidePadding: Float,
-            onClick: (BibleVerse, View) -> Unit
-        ) {
-
-            bgAnimator?.cancel()
-            val isHeading = verse.verse == "0"
-            val isPlaceholder = verse.type == "placeholder"
-            val density = binding.root.resources.displayMetrics.density
-
-            if (isHeading) {
-                binding.textVerseNumber.visibility = View.GONE
-                binding.textVerseContent.gravity = Gravity.CENTER
-                val basePadding = (16 * density).toInt()
-                binding.layoutVerseMain.setPadding(basePadding, 48, basePadding, 24)
-            } else {
-                binding.textVerseNumber.visibility = View.GONE
-                binding.textVerseContent.gravity = Gravity.START
-                val hPadding = (sidePadding * density).toInt()
-                val vPadding = (6 * density).toInt()
-                binding.layoutVerseMain.setPadding(hPadding, vPadding, hPadding, vPadding)
-            }
-
-            if (isPlaceholder) {
-                binding.textVerseContent.text = ""
-                binding.root.setOnClickListener(null)
-                binding.root.setBackgroundColor(Color.TRANSPARENT)
-                binding.imgPinIndicator.visibility = View.GONE
-                return
-            }
-
-            val verseNum = verse.verse ?: ""
-            val rawText = verse.text ?: ""
-            val fullText = if (isHeading || verseNum == "0") rawText else "$verseNum $rawText"
-            val spannable = SpannableString(fullText)
-
-            val typedValue = TypedValue()
-            val theme = binding.root.context.theme
-            
-            // Base text colors: Guaranteed contrast with effective verse background
-            val context = binding.root.context
-            val customFontColor = try {
-                if (settings.fontColor.isNotBlank() && settings.fontColor != "default") {
-                    Color.parseColor(settings.fontColor)
-                } else null
-            } catch (e: Exception) { null }
-            val effectiveVerseBg = ThemeHelper.getEffectiveToolbarColor(context)
-            val effectiveTextColor = ThemeHelper.getContrastingTextColor(effectiveVerseBg, customFontColor)
-            val textColor = effectiveTextColor
-            
-            val rawPrimary = if (theme.resolveAttribute(androidx.appcompat.R.attr.colorPrimary, typedValue, true)) typedValue.data else Color.parseColor("#1976D2")
-            val primaryColor = ThemeHelper.getContrastingVerseNumberColor(effectiveVerseBg, rawPrimary)
-            val selectionColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorPrimaryContainer, typedValue, true)) typedValue.data else Color.parseColor("#FFE0B2")
-            val defaultBookmarkColor = if (theme.resolveAttribute(com.google.android.material.R.attr.colorSecondaryContainer, typedValue, true)) typedValue.data else Color.parseColor("#FFF9C4")
-
-            if (!isHeading && verseNum != "0" && verseNum.isNotEmpty()) {
-                val end = verseNum.length
-                spannable.setSpan(ForegroundColorSpan(primaryColor), 0, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                spannable.setSpan(RelativeSizeSpan(0.85f), 0, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                spannable.setSpan(StyleSpan(Typeface.BOLD), 0, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-                spannable.setSpan(SuperscriptSpan(), 0, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            val contentStart = if (isHeading || verseNum == "0") 0 else verseNum.length + 1
-            if (pin != null && contentStart < spannable.length) {
-                val pinColor = try { Color.parseColor(pin.color) } catch (e: Exception) { Color.RED }
-                spannable.setSpan(WavyUnderlineSpan(pinColor), contentStart, spannable.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            val isBookmarked = bookmark != null
-            val savedBookmarkColor = if (bookmark != null) {
-                if (membershipType == MembershipType.FREE) {
-                    ThemeHelper.getSoftBookmarkColor("#E0E0E0", effectiveVerseBg)
-                } else {
-                    ThemeHelper.getSoftBookmarkColor(bookmark.color, effectiveVerseBg)
-                }
-            } else defaultBookmarkColor
-
-            val normalBgColor = when {
-                isSelected -> selectionColor
-                isBookmarked -> savedBookmarkColor
-                else -> Color.TRANSPARENT
-            }
-
-            val isHighlighted = isSelected || isBookmarked
-            val finalTextColor = if (isHighlighted) {
-                ThemeHelper.getContrastingTextColor(normalBgColor, customFontColor)
-            } else {
-                textColor
-            }
-
-            if (isHighlighted && !isHeading && verseNum != "0" && verseNum.isNotEmpty()) {
-                val highlightedVNumColor = ThemeHelper.getContrastingVerseNumberColor(normalBgColor, rawPrimary)
-                spannable.setSpan(ForegroundColorSpan(highlightedVNumColor), 0, verseNum.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-            }
-
-            binding.textVerseContent.text = spannable
-            binding.textVerseContent.setTextColor(finalTextColor)
-
-            if (shouldHighlight) {
-                bgAnimator = ValueAnimator.ofObject(ArgbEvaluator(), normalBgColor, Color.parseColor("#80FF0000")).apply {
-                    duration = 500
-                    repeatCount = 7
-                    repeatMode = ValueAnimator.REVERSE
-                    addUpdateListener { animator ->
-                        binding.root.setBackgroundColor(animator.animatedValue as Int)
-                    }
-                    start()
-                }
-            } else {
-                binding.root.setBackgroundColor(normalBgColor)
-            }
-
-            if (pin != null) {
-                binding.imgPinIndicator.visibility = View.VISIBLE
-                try {
-                    binding.imgPinIndicator.setColorFilter(Color.parseColor(pin.color))
-                } catch (e: Exception) {
-                    binding.imgPinIndicator.setColorFilter(Color.RED)
-                }
-            } else {
-                binding.imgPinIndicator.visibility = View.GONE
-            }
-
-            val baseSize = if (settings.fontSize < 12f) 18f else settings.fontSize
-            if (isHeading) binding.textVerseContent.setTextSize(TypedValue.COMPLEX_UNIT_SP, baseSize + 2f) else binding.textVerseContent.setTextSize(TypedValue.COMPLEX_UNIT_SP, baseSize)
-
-            val style = if (isHeading) Typeface.BOLD else when {
-                settings.isBold && settings.isItalic -> Typeface.BOLD_ITALIC; settings.isBold -> Typeface.BOLD; settings.isItalic -> Typeface.ITALIC; else -> Typeface.NORMAL
-            }
-
-            val tf = try {
-                when (settings.fontFamily) {
-                    "Default" -> Typeface.create(Typeface.DEFAULT, style)
-                    "Sans Serif" -> Typeface.create(Typeface.SANS_SERIF, style)
-                    "Serif", "Times New Roman" -> Typeface.create(Typeface.SERIF, style)
-                    "Monospace" -> Typeface.create(Typeface.MONOSPACE, style)
-                    else -> {
-                        val extensions = listOf(".ttf", ".otf")
-                        var assetTf: Typeface? = null
-                        for (ext in extensions) {
-                            try {
-                                assetTf = Typeface.createFromAsset(binding.root.context.assets, "fonts/${settings.fontFamily}$ext")
-                                break
-                            } catch (e: Exception) { }
-                        }
-                        if (assetTf != null) Typeface.create(assetTf, style) else Typeface.create(Typeface.SERIF, style)
-                    }
-                }
-            } catch (e: Exception) {
-                Typeface.create(Typeface.SERIF, style)
-            }
-
-            binding.textVerseContent.typeface = tf
-            binding.textVerseContent.letterSpacing = settings.letterSpacing
-            val mult = if (settings.lineHeight <= 1.05f) 1.28f else settings.lineHeight
-            binding.textVerseContent.setLineSpacing((2 * density), mult)
-            binding.root.setOnClickListener { onClick(verse, binding.root) }
-        }
-
-        private fun isColorDark(color: Int): Boolean {
-            val darkness = 1 - (0.299 * Color.red(color) + 0.587 * Color.green(color) + 0.114 * Color.blue(color)) / 255.0
-            return darkness >= 0.5
-        }
-    }
-
-    class VerseDiffCallback : DiffUtil.ItemCallback<BibleVerse>() {
-        override fun areItemsTheSame(oldItem: BibleVerse, newItem: BibleVerse): Boolean = oldItem.id == newItem.id
-        override fun areContentsTheSame(oldItem: BibleVerse, newItem: BibleVerse): Boolean = oldItem == newItem
     }
 }

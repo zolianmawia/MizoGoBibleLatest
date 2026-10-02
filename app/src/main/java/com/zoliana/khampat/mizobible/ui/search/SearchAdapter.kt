@@ -51,7 +51,10 @@ class SearchAdapter(private val onVerseClick: (BibleVerse) -> Unit) :
 
             val content = verse.text ?: ""
             if (query.isNotEmpty() && query.length >= 2) {
-                binding.textContent.text = highlightMatches(content, query)
+                val trimmed = query.trim()
+                val isExact = trimmed.startsWith("\"") && trimmed.endsWith("\"")
+                val cleanQuery = if (isExact) trimmed.removeSurrounding("\"") else query
+                binding.textContent.text = highlightMatches(content, cleanQuery, isExact)
             } else {
                 binding.textContent.text = content
             }
@@ -59,14 +62,15 @@ class SearchAdapter(private val onVerseClick: (BibleVerse) -> Unit) :
             binding.root.setOnClickListener { onClick(verse) }
         }
 
-        private fun highlightMatches(content: String, query: String): CharSequence {
+        private fun highlightMatches(content: String, query: String, isExact: Boolean = false): CharSequence {
             val spannable = SpannableString(content)
             val highlighted = BooleanArray(content.length)
             var foundAny = false
 
             // 1. Full phrase match first
             try {
-                val fullRegex = buildMizoRegex(query)
+                val baseRegex = buildMizoRegex(query)
+                val fullRegex = if (isExact) "(?<!\\p{L})$baseRegex(?!\\p{L})" else baseRegex
                 val pattern = Pattern.compile(fullRegex, Pattern.CASE_INSENSITIVE)
                 val matcher = pattern.matcher(content)
                 while (matcher.find()) {
@@ -77,21 +81,23 @@ class SearchAdapter(private val onVerseClick: (BibleVerse) -> Unit) :
                 }
             } catch (_: Exception) {}
 
-            // 2. Token-level matches (especially when variations like i/in, a/an occur)
-            val tokens = query.trim().split(Regex("\\s+")).filter { it.length >= 2 }
-            if (tokens.isNotEmpty()) {
-                for (token in tokens) {
-                    try {
-                        val tokenRegex = buildMizoTokenRegex(token)
-                        val pattern = Pattern.compile(tokenRegex, Pattern.CASE_INSENSITIVE)
-                        val matcher = pattern.matcher(content)
-                        while (matcher.find()) {
-                            for (i in matcher.start() until matcher.end()) {
-                                if (i in highlighted.indices) highlighted[i] = true
+            // 2. Token-level matches (skip if exact phrase search)
+            if (!isExact) {
+                val tokens = query.trim().split(Regex("\\s+")).filter { it.length >= 2 }
+                if (tokens.isNotEmpty()) {
+                    for (token in tokens) {
+                        try {
+                            val tokenRegex = buildMizoTokenRegex(token)
+                            val pattern = Pattern.compile(tokenRegex, Pattern.CASE_INSENSITIVE)
+                            val matcher = pattern.matcher(content)
+                            while (matcher.find()) {
+                                for (i in matcher.start() until matcher.end()) {
+                                    if (i in highlighted.indices) highlighted[i] = true
+                                }
+                                foundAny = true
                             }
-                            foundAny = true
-                        }
-                    } catch (_: Exception) {}
+                        } catch (_: Exception) {}
+                    }
                 }
             }
 

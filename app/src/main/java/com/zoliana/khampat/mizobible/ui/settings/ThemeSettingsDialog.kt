@@ -144,11 +144,14 @@ class ThemeSettingsDialog : BottomSheetDialogFragment() {
             ThemeHelper.setThemeOpacity(context, currentOpacity)
             ThemeHelper.applyThemePreset(context, selectedPreset)
 
-            (activity as? MainActivity)?.applyThemeColors()
+            val main = activity as? MainActivity
+            main?.applyThemeColors()
             viewModel.refreshFontSettings()
 
             dismiss()
-            activity?.recreate()
+            if (main?.isDownloading() != true) {
+                activity?.recreate()
+            }
         }
     }
 

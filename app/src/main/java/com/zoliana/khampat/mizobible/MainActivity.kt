@@ -21,8 +21,10 @@ import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.Shader
 import android.graphics.Typeface
+import android.graphics.drawable.ClipDrawable
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.graphics.drawable.StateListDrawable
 import android.view.ViewOutlineProvider
 import com.google.android.material.shape.CornerFamily
@@ -100,6 +102,7 @@ import com.zoliana.khampat.mizobible.ui.transform.TransformViewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -122,6 +125,9 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
     private var downloadJob: Job? = null
     private var downloadDialog: AlertDialog? = null
     private var downloadProgressBinding: DialogDownloadProgressBinding? = null
+    private var currentDownloadingVersionCode: String? = null
+
+    fun isDownloading(): Boolean = downloadJob?.isActive == true
 
     private var backPressedTime: Long = 0
     private var authStateListener: FirebaseAuth.AuthStateListener? = null
@@ -326,7 +332,6 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
 
         applyLayoutStyle()
         setupVersionSelector()
-        setupSplitLabel()
         checkDatabaseState()
         setupToolbarButtons()
         handleImmersiveMode(resources.configuration.orientation)
@@ -378,6 +383,7 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
 
         binding.appBarMain.progressDownloadMinimized.setOnClickListener {
             downloadDialog?.show()
+            applyDownloadDialogTheme()
             binding.appBarMain.progressDownloadMinimized.visibility = View.GONE
         }
 
@@ -408,6 +414,28 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
                 }
             }
         })
+
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiEvent.collectLatest { event ->
+                    when (event) {
+                        is TransformViewModel.UiEvent.ShowUpgradeDialog -> showGlobalUpgradeDialog()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun showGlobalUpgradeDialog() {
+        val dialog = MaterialAlertDialogBuilder(this)
+            .setTitle("Limit Tling Ta! ⚠️")
+            .setMessage("Free member tan chuan Pin/Note/Bookmark hi 10 chauh dah phal a ni e. I duh belh chuan Upgrade rawh le.")
+            .setPositiveButton("Upgrade") { _, _ ->
+                findNavController(R.id.nav_host_fragment_content_main).navigate(R.id.nav_you)
+            }
+            .setNegativeButton("Awle", null)
+            .show()
+        limitDialogWidth(dialog)
     }
 
     private fun openChapterSelector() {
@@ -1122,7 +1150,6 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         binding.appBarMain.toolbarChapterSelector.visibility = View.GONE
         binding.appBarMain.layoutTitlesContainer.visibility = View.GONE
         binding.appBarMain.layoutToolbarButtons.visibility = View.GONE
-        binding.appBarMain.layoutSplitHeader.visibility = View.GONE
 
         binding.appBarMain.toolbar.navigationIcon = null
         supportActionBar?.setDisplayHomeAsUpEnabled(false)
@@ -1194,7 +1221,6 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
             binding.appBarMain.toolbarChapterSelector.visibility = View.GONE
             binding.appBarMain.layoutTitlesContainer.visibility = View.GONE
             binding.appBarMain.layoutToolbarButtons.visibility = View.GONE
-            binding.appBarMain.layoutSplitHeader.visibility = View.GONE
             binding.appBarMain.toolbar.navigationIcon = null
             supportActionBar?.setDisplayHomeAsUpEnabled(false)
             binding.appBarMain.editToolbarSearch.hint =
@@ -1208,7 +1234,6 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
                 if (isTransform && isLandscape) View.GONE else View.VISIBLE
             binding.appBarMain.layoutToolbarButtons.visibility =
                 if (isTransform) View.VISIBLE else View.GONE
-            binding.appBarMain.layoutSplitHeader.visibility = View.GONE
             applyThemeColors()
             updateToolbarText()
         }
@@ -1275,13 +1300,23 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         if (downloadJob?.isActive == true) {
             Toast.makeText(this, "Download dang a kal mek e.", Toast.LENGTH_SHORT).show(); return
         }
+        currentDownloadingVersionCode = vCode
+        val fullTitle = getFullVersionName(vCode)
+        val shortCode = getVersionDisplayName(vCode)
+
         val progressBinding = DialogDownloadProgressBinding.inflate(layoutInflater)
         downloadProgressBinding = progressBinding
+
+        progressBinding.textDownloadTitle.text = "Downloading $shortCode Bible"
+        progressBinding.textDownloadStatus.text = "$fullTitle database download mek a ni..."
+
         val dialog = AlertDialog.Builder(this)
             .setView(progressBinding.root)
             .setCancelable(false)
             .create()
         downloadDialog = dialog
+
+        applyDownloadDialogTheme()
 
         progressBinding.btnMinimizeDownload.setOnClickListener {
             dialog.dismiss()
@@ -1291,9 +1326,10 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         progressBinding.btnCloseDownload.setOnClickListener {
             MaterialAlertDialogBuilder(this)
                 .setTitle("Cancel Download")
-                .setMessage("Download hi tihtawp i duh tak zet em?")
+                .setMessage("$fullTitle download hi tihtawp i duh tak zet em?")
                 .setPositiveButton("Aw") { _, _ ->
                     downloadJob?.cancel()
+                    currentDownloadingVersionCode = null
                     dialog.dismiss()
                     binding.appBarMain.progressDownloadMinimized.visibility = View.GONE
                     Toast.makeText(this, "Download cancelled", Toast.LENGTH_SHORT).show()
@@ -1304,6 +1340,7 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
 
         dialog.show()
         limitDialogWidth(dialog, true)
+        applyDownloadDialogTheme()
 
         downloadJob = lifecycleScope.launch(Dispatchers.IO) {
             try {
@@ -1358,11 +1395,11 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
                 }
                 output.close(); input.close()
                 if (!isActive) {
-                    tempFile.delete(); return@launch
+                    tempFile.delete(); currentDownloadingVersionCode = null; return@launch
                 }
                 withContext(Dispatchers.Main) {
                     downloadProgressBinding?.textDownloadStatus?.text =
-                        "Database update hna thawh mek a ni..."
+                        "$fullTitle database update hna thawh mek a ni..."
                 }
                 val sourceDb = SQLiteDatabase.openDatabase(
                     tempFile.absolutePath,
@@ -1374,6 +1411,7 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
                 withContext(Dispatchers.Main) {
                     downloadDialog?.dismiss()
                     binding.appBarMain.progressDownloadMinimized.visibility = View.GONE
+                    currentDownloadingVersionCode = null
                     if (importedCount > 1000) {
                         val remoteVer = if (remoteVersions?.containsKey(vCode) == true) {
                             val vData =
@@ -1385,7 +1423,7 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
                             .apply()
                         checkForUpdates(); Toast.makeText(
                             this@MainActivity,
-                            "$vCode database updated!",
+                            "$fullTitle database updated!",
                             Toast.LENGTH_SHORT
                         ).show(); viewModel.updateVersion(vCode)
                     } else Toast.makeText(
@@ -1396,6 +1434,7 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
+                    currentDownloadingVersionCode = null
                     downloadDialog?.dismiss()
                     binding.appBarMain.progressDownloadMinimized.visibility = View.GONE
                 }
@@ -1685,26 +1724,6 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         }
     }
 
-    private fun setupSplitLabel() {
-        lifecycleScope.launch {
-            viewModel.isSplitMode.collectLatest {
-                binding.appBarMain.layoutSplitHeader.visibility = View.GONE
-                updateSplitLabelText()
-                (binding.navView.menu.findItem(
-                    R.id.split
-                )?.actionView as? MaterialSwitch)?.isChecked = it
-            }
-        }
-        lifecycleScope.launch { viewModel.splitVersion.collectLatest { updateSplitLabelText() } }
-        binding.appBarMain.textSplitVersionLabel.setOnClickListener { showSplitVersionSelectionDialog() }
-        binding.appBarMain.btnCloseParallel.setOnClickListener { viewModel.setSplitMode(false) }
-    }
-
-    private fun updateSplitLabelText() {
-        binding.appBarMain.textSplitVersionLabel.text =
-            getVersionDisplayName(viewModel.splitVersion.value)
-    }
-
     private fun setupSplitModeToggle(navView: NavigationView?) {
         val actionView =
             navView?.menu?.findItem(R.id.split)?.actionView as? MaterialSwitch; actionView?.isChecked =
@@ -1807,9 +1826,11 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
             dialog.findViewById<TextView>(androidx.appcompat.R.id.alertTitle)?.setTextColor(tbTextColor)
             dialog.findViewById<TextView>(android.R.id.message)?.setTextColor(subtitleColor)
             if (dialog is androidx.appcompat.app.AlertDialog) {
+                val isDark = ThemeHelper.isCurrentThemeDark(this)
+                val cancelTextColor = if (isDark) Color.parseColor("#E0E0E0") else Color.parseColor("#374151")
                 dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE)?.setTextColor(primaryColor)
-                dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE)?.setTextColor(primaryColor)
-                dialog.getButton(android.content.DialogInterface.BUTTON_NEUTRAL)?.setTextColor(primaryColor)
+                dialog.getButton(android.content.DialogInterface.BUTTON_NEGATIVE)?.setTextColor(cancelTextColor)
+                dialog.getButton(android.content.DialogInterface.BUTTON_NEUTRAL)?.setTextColor(cancelTextColor)
             }
         }
     }
@@ -1858,11 +1879,6 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
         binding.appBarMain.textToolbarFragmentTitle.setTextColor(tbTextColor)
         binding.appBarMain.textVersionSelector.setTextColor(tbTextColor)
         TextViewCompat.setCompoundDrawableTintList(binding.appBarMain.textVersionSelector, ColorStateList.valueOf(tbIconColor))
-        binding.appBarMain.textSplitVersionLabel.setTextColor(tbTextColor)
-        binding.appBarMain.textSplitVersionLabel.alpha = 1.0f
-        TextViewCompat.setCompoundDrawableTintList(binding.appBarMain.textSplitVersionLabel, ColorStateList.valueOf(tbIconColor))
-        binding.appBarMain.btnCloseParallel.setColorFilter(tbIconColor)
-        binding.appBarMain.btnCloseParallel.alpha = 1.0f
 
         val cardColor = ThemeHelper.getEffectiveCardColor(this)
 
@@ -2050,6 +2066,85 @@ class MainActivity : AppCompatActivity(), PaymentResultListener {
             }
         }
         applyToFm(supportFragmentManager)
+        applyDownloadDialogTheme()
+    }
+
+    fun applyDownloadDialogTheme() {
+        val context = this
+        val toolbarColor = ThemeHelper.getEffectiveToolbarColor(context)
+        val cardColor = ThemeHelper.getEffectiveCardColor(context) ?: toolbarColor
+        val primaryColor = ThemeHelper.getPrimaryColor(context)
+        val effectiveFontColor = ThemeHelper.getEffectiveFontColor(context)
+        val effectiveIconColor = ThemeHelper.getEffectiveIconColor(context)
+        val isDark = ThemeHelper.isColorDark(toolbarColor)
+
+        // 1. Minimized toolbar progress bar
+        val minTrackColor = if (isDark) ColorUtils.setAlphaComponent(Color.WHITE, 40) else ColorUtils.setAlphaComponent(Color.BLACK, 30)
+        val minProgressDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(primaryColor)
+        }
+        val minBgDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            setColor(minTrackColor)
+        }
+        val minLayerList = LayerDrawable(arrayOf(minBgDrawable, ClipDrawable(minProgressDrawable, Gravity.START, ClipDrawable.HORIZONTAL))).apply {
+            setId(0, android.R.id.background)
+            setId(1, android.R.id.progress)
+        }
+        binding.appBarMain.progressDownloadMinimized.progressDrawable = minLayerList
+
+        // 2. Download dialog binding
+        val b = downloadProgressBinding ?: return
+        val dialog = downloadDialog ?: return
+
+        val headerTextColor = ThemeHelper.getContrastingTextColor(toolbarColor, effectiveFontColor)
+        val headerIconColor = effectiveIconColor ?: headerTextColor
+        val bodyTextColor = ThemeHelper.getContrastingTextColor(cardColor, effectiveFontColor)
+        val bodySecondaryColor = ColorUtils.setAlphaComponent(bodyTextColor, 180)
+
+        // Transparent dialog window for rounded card corners
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
+
+        // Card root background
+        b.cardDownloadRoot.setCardBackgroundColor(cardColor)
+        b.layoutDownloadBody.setBackgroundColor(Color.TRANSPARENT)
+
+        // Header / drag handle
+        b.layoutDragHandle.setBackgroundColor(toolbarColor)
+        b.textDownloadTitle.setTextColor(headerTextColor)
+        ImageViewCompat.setImageTintList(b.btnMinimizeDownload, ColorStateList.valueOf(headerIconColor))
+        b.btnMinimizeDownload.setColorFilter(headerIconColor)
+        ImageViewCompat.setImageTintList(b.btnCloseDownload, ColorStateList.valueOf(headerIconColor))
+        b.btnCloseDownload.setColorFilter(headerIconColor)
+
+        // Divider
+        b.viewDownloadDivider.setBackgroundColor(
+            if (isDark) ColorUtils.setAlphaComponent(Color.WHITE, 30)
+            else ColorUtils.setAlphaComponent(Color.BLACK, 25)
+        )
+
+        // Content texts
+        b.textDownloadStatus.setTextColor(bodySecondaryColor)
+        b.textDownloadPercent.setTextColor(bodyTextColor)
+
+        // Dialog Progress bar
+        val trackColor = if (isDark) ColorUtils.setAlphaComponent(Color.WHITE, 45) else ColorUtils.setAlphaComponent(primaryColor, 40)
+        val progressDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 6f * resources.displayMetrics.density
+            setColor(primaryColor)
+        }
+        val bgDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 6f * resources.displayMetrics.density
+            setColor(trackColor)
+        }
+        val layerList = LayerDrawable(arrayOf(bgDrawable, ClipDrawable(progressDrawable, Gravity.START, ClipDrawable.HORIZONTAL))).apply {
+            setId(0, android.R.id.background)
+            setId(1, android.R.id.progress)
+        }
+        b.progressBarDownload.progressDrawable = layerList
     }
 
     private fun applyDrawerCornersAndBackground(toolbarColor: Int) {

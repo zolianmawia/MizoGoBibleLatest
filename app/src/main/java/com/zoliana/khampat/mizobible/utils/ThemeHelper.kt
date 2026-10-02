@@ -21,7 +21,10 @@ import com.google.android.material.appbar.CollapsingToolbarLayout
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.materialswitch.MaterialSwitch
+import com.google.android.material.textfield.TextInputLayout
 import com.zoliana.khampat.mizobible.R
+import com.zoliana.khampat.mizobible.databinding.DialogBookmarkBinding
+import com.zoliana.khampat.mizobible.databinding.DialogBookmarkActionsBinding
 
 object ThemeHelper {
 
@@ -58,7 +61,7 @@ object ThemeHelper {
                     c.contains("green") || c.contains("mint") || c == "#4caf50" || c == "#43a047" || c == "#00e676" || c == "#b9f6ca" || c == "#a5d6a7" || c == "#c8e6c9" -> Color.parseColor(BOOKMARK_GREEN)
                     c.contains("yellow") || c.contains("gold") || c.contains("amber") || c == "#ffd740" || c == "#ffc107" || c == "#ffeb3b" || c == "#ffe082" || c == "#fff59d" || c == "#fff9c4" -> Color.parseColor(BOOKMARK_YELLOW)
                     c.contains("purple") || c.contains("violet") || c == "#9c27b0" || c == "#8e24aa" || c == "#ab47bc" || c == "#ce93d8" || c == "#e1bee7" -> Color.parseColor(BOOKMARK_PURPLE)
-                    c == "#e0e0e0" || c == "#eeeeee" || c.contains("gray") || c.contains("grey") -> Color.parseColor("#E0E0E0")
+                    c == "#e0e0e0" || c == "#eeeeee" || c.contains("gray") || c.contains("grey") -> Color.parseColor(BOOKMARK_YELLOW)
                     else -> Color.parseColor(rawColor)
                 }
             } else Color.parseColor(BOOKMARK_YELLOW)
@@ -67,7 +70,8 @@ object ThemeHelper {
         }
 
         val isDark = isColorDark(effectiveBgColor)
-        val blendFactor = if (isDark) 0.16f else 0.20f
+        // High visibility blend: in dark mode, 0.38f ensures a rich luminous tint; in light/colored mode, 0.52f ensures vibrant color distinction
+        val blendFactor = if (isDark) 0.38f else 0.52f
         return ColorUtils.blendARGB(effectiveBgColor, parsedColor, blendFactor)
     }
 
@@ -243,6 +247,7 @@ object ThemeHelper {
     // Effective background check: True if current toolbar/verse background is dark
     fun isCurrentThemeDark(context: Context): Boolean {
         if (isDarkMode(context)) return true
+        if (getThemeOpacity(context) >= 0.5f) return true
         val bg = getEffectiveToolbarColor(context)
         return isColorDark(bg)
     }
@@ -252,6 +257,7 @@ object ThemeHelper {
     val LIGHT_MODE_FONT_COLORS = listOf(
         FontColorOption("default", "Auto (Default)", "", Color.parseColor("#201A1B")),
         FontColorOption("black", "Pitch Black", "#000000", Color.parseColor("#000000")),
+        FontColorOption("white", "Pure White (Var)", "#FFFFFF", Color.parseColor("#FFFFFF")),
         FontColorOption("charcoal", "Soft Charcoal", "#262626", Color.parseColor("#262626")),
         FontColorOption("sepia", "Sepia Brown", "#3E2723", Color.parseColor("#3E2723")),
         FontColorOption("navy", "Deep Navy", "#0D1B2A", Color.parseColor("#0D1B2A")),
@@ -265,7 +271,7 @@ object ThemeHelper {
     // ONLY usable light/white tones: No black, charcoal, sepia, deep navy, or dark tones
     val DARK_MODE_FONT_COLORS = listOf(
         FontColorOption("default", "Auto (Default)", "", Color.parseColor("#FFFFFF")),
-        FontColorOption("white", "Pure White", "#FFFFFF", Color.parseColor("#FFFFFF")),
+        FontColorOption("white", "Pure White (Var)", "#FFFFFF", Color.parseColor("#FFFFFF")),
         FontColorOption("cream", "Warm Cream", "#FFF8E7", Color.parseColor("#FFF8E7")),
         FontColorOption("silver", "Soft Silver", "#D3D4F2", Color.parseColor("#D3D4F2")),
         FontColorOption("gold", "Golden Amber", "#FFE082", Color.parseColor("#FFE082")),
@@ -277,17 +283,20 @@ object ThemeHelper {
     val FONT_COLORS: List<FontColorOption>
         get() = LIGHT_MODE_FONT_COLORS
 
-    // Dynamically returns only font colors suitable for the active mode and theme
+    // Dynamically returns font colors suitable for the active mode and theme
     fun getAvailableFontColors(context: Context): List<FontColorOption> {
         val isDark = isCurrentThemeDark(context)
+        val opacity = getThemeOpacity(context)
         val bg = getEffectiveToolbarColor(context)
-        return if (isDark) {
+
+        // When theme is dark or color intensity is half or more (opacity >= 0.45f), show white & light font colors
+        return if (isDark || opacity >= 0.45f) {
             DARK_MODE_FONT_COLORS.filter { option ->
                 if (option.hex.isEmpty()) true
                 else {
                     try {
                         val c = Color.parseColor(option.hex)
-                        !isColorDark(c) && ColorUtils.calculateContrast(c, bg) >= 3.8
+                        !isColorDark(c)
                     } catch (_: Exception) { true }
                 }
             }
@@ -297,7 +306,7 @@ object ThemeHelper {
                 else {
                     try {
                         val c = Color.parseColor(option.hex)
-                        isColorDark(c) && ColorUtils.calculateContrast(c, bg) >= 3.8
+                        isColorDark(c) && ColorUtils.calculateContrast(c, bg) >= 3.0
                     } catch (_: Exception) { true }
                 }
             }
@@ -348,8 +357,19 @@ object ThemeHelper {
         val isDark = isColorDark(bgColor)
         val fallbackColor = if (isDark) Color.parseColor("#F5F5F7") else Color.parseColor("#121212")
         if (preferredColor == null) return fallbackColor
+        val isPreferredDark = isColorDark(preferredColor)
+
+        // If preferred color is light (e.g. white font) and background is dark (or dark-tinted/semi-opaque)
+        if (!isPreferredDark) {
+            val ratio = ColorUtils.calculateContrast(preferredColor, bgColor)
+            if (isDark || ratio >= 2.0) return preferredColor
+        }
+
+        // If preferred color is dark and background is light
+        if (isPreferredDark && !isDark) return preferredColor
+
         val ratio = ColorUtils.calculateContrast(preferredColor, bgColor)
-        return if (ratio >= 4.0) preferredColor else fallbackColor
+        return if (ratio >= 2.0) preferredColor else fallbackColor
     }
 
     fun getContrastingVerseNumberColor(bgColor: Int, primaryColor: Int): Int {
@@ -502,14 +522,14 @@ object ThemeHelper {
         val isSystemNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
                 Configuration.UI_MODE_NIGHT_YES
         val (baseHex, richHex) = when (preset) {
-            ThemePreset.SYSTEM -> if (isSystemNight) ("#222333" to "#0A0B10") else ("#FAF7F0" to "#D7CCC8")
-            ThemePreset.LIGHT -> ("#FAF7F0" to "#D7CCC8")
+            ThemePreset.SYSTEM -> if (isSystemNight) ("#222333" to "#0A0B10") else ("#FAF7F0" to "#3E2723")
+            ThemePreset.LIGHT -> ("#FAF7F0" to "#3E2723")
             ThemePreset.NIGHT -> ("#222333" to "#0A0B10")
-            ThemePreset.RED -> ("#FFF0F2" to "#F48FB1")
-            ThemePreset.BLUE -> ("#EBF3FA" to "#90CAF9")
-            ThemePreset.GREEN -> ("#EDF7EE" to "#A5D6A7")
-            ThemePreset.YELLOW -> ("#FEF9E7" to "#FFE082")
-            ThemePreset.WHITE -> ("#FFFFFF" to "#E2E8F0")
+            ThemePreset.RED -> ("#FFF0F2" to "#880E4F")
+            ThemePreset.BLUE -> ("#EBF3FA" to "#0D47A1")
+            ThemePreset.GREEN -> ("#EDF7EE" to "#1B5E20")
+            ThemePreset.YELLOW -> ("#FEF9E7" to "#BF360C")
+            ThemePreset.WHITE -> ("#FFFFFF" to "#334155")
         }
         val baseColor = Color.parseColor(baseHex)
         val clampedOpacity = opacity.coerceIn(0f, 1f)
@@ -522,14 +542,14 @@ object ThemeHelper {
         val isSystemNight = (context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) ==
                 Configuration.UI_MODE_NIGHT_YES
         val (baseHex, richHex) = when (preset) {
-            ThemePreset.SYSTEM -> if (isSystemNight) ("#2E2F45" to "#12131A") else ("#EBE2CF" to "#BCAAA4")
-            ThemePreset.LIGHT -> ("#EBE2CF" to "#BCAAA4")
+            ThemePreset.SYSTEM -> if (isSystemNight) ("#2E2F45" to "#12131A") else ("#EBE2CF" to "#4E342E")
+            ThemePreset.LIGHT -> ("#EBE2CF" to "#4E342E")
             ThemePreset.NIGHT -> ("#2E2F45" to "#12131A")
-            ThemePreset.RED -> ("#FCE4EC" to "#F06292")
-            ThemePreset.BLUE -> ("#DCEBF7" to "#64B5F6")
-            ThemePreset.GREEN -> ("#DCEDDD" to "#81C784")
-            ThemePreset.YELLOW -> ("#FBF0CB" to "#FFD54F")
-            ThemePreset.WHITE -> ("#F3F4F6" to "#CBD5E1")
+            ThemePreset.RED -> ("#FCE4EC" to "#AD1457")
+            ThemePreset.BLUE -> ("#DCEBF7" to "#1565C0")
+            ThemePreset.GREEN -> ("#DCEDDD" to "#2E7D32")
+            ThemePreset.YELLOW -> ("#FBF0CB" to "#D84315")
+            ThemePreset.WHITE -> ("#F3F4F6" to "#475569")
         }
         val baseColor = Color.parseColor(baseHex)
         val clampedOpacity = opacity.coerceIn(0f, 1f)
@@ -565,14 +585,21 @@ object ThemeHelper {
             try {
                 val color = Color.parseColor(if (hex.startsWith("#")) hex else "#$hex")
                 val isDark = isCurrentThemeDark(context)
+                val opacity = getThemeOpacity(context)
                 val bg = getEffectiveToolbarColor(context)
                 val contrast = ColorUtils.calculateContrast(color, bg)
-                // In Dark mode: dark colors are invalid (contrast < 3.0 or dark color)
-                if (isDark && (isColorDark(color) || contrast < 3.0)) {
+
+                // When user explicitly sets white or light font and opacity is half or more (>= 0.45f) or theme is dark or contrast is sufficient:
+                if (!isColorDark(color) && (isDark || opacity >= 0.45f || contrast >= 2.0)) {
+                    return color
+                }
+
+                // In Dark mode: dark colors are invalid if contrast is too poor
+                if (isDark && (isColorDark(color) && contrast < 2.0)) {
                     return null
                 }
-                // In Light mode: light/faint colors are invalid (contrast < 3.0 or not dark)
-                if (!isDark && (!isColorDark(color) || contrast < 3.0)) {
+                // In purely Light mode with low opacity: light/faint colors are invalid
+                if (!isDark && opacity < 0.45f && (!isColorDark(color) && contrast < 2.0)) {
                     return null
                 }
                 return color
@@ -605,10 +632,7 @@ object ThemeHelper {
         if (view.id == R.id.dialog_theme_settings_root ||
             view.id == R.id.dialog_font_settings_root ||
             view.id == R.id.dialog_bible_versions_root ||
-            view.id == R.id.dialog_about_root ||
-            view.id == R.id.split_divider_container ||
-            view.id == R.id.split_divider_line ||
-            view.id == R.id.split_handle) return
+            view.id == R.id.dialog_about_root) return
 
         val toolbarColor = getEffectiveToolbarColor(context)
         val bgColor = toolbarColor
@@ -647,15 +671,17 @@ object ThemeHelper {
             view.id == R.id.dialog_font_settings_root ||
             view.id == R.id.dialog_bible_versions_root ||
             view.id == R.id.dialog_about_root ||
-            view.id == R.id.nav_view ||
-            view.id == R.id.split_divider_container ||
-            view.id == R.id.split_divider_line ||
-            view.id == R.id.split_handle) return
+            view.id == R.id.nav_view) return
 
         var currentInsideCardDark = insideCardDark
 
         if (view is MaterialCardView) {
-            if (cardColor != null) {
+            val isColorSwatch = view.id in listOf(
+                R.id.colorYellow, R.id.colorGreen, R.id.colorBlue, R.id.colorRed, R.id.colorPurple,
+                R.id.color_yellow, R.id.color_green, R.id.color_blue, R.id.color_red, R.id.color_purple,
+                R.id.card_split_pill
+            )
+            if (!isColorSwatch && cardColor != null) {
                 view.setCardBackgroundColor(cardColor)
                 val isDark = isColorDark(cardColor)
                 view.strokeColor = if (isDark) Color.parseColor("#20FFFFFF") else Color.parseColor("#15000000")
@@ -704,15 +730,25 @@ object ThemeHelper {
             viewId == R.id.text_profile_toolbar_title ||
             viewId == R.id.text_header_title ||
             viewId == R.id.text_header_subtitle ||
-            viewId == R.id.split_handle ||
-            viewId == R.id.split_divider_line ||
-            viewId == R.id.split_divider_container ||
-            viewId == R.id.text_handle_icon ||
-            viewId == R.id.btn_parallel_line_close ||
             viewId == R.id.text_parallel_line_version) {
             if ((viewId == R.id.btn_done || viewId == R.id.btn_apply_theme) && view is MaterialButton) {
                 view.setTextColor(Color.WHITE)
             }
+            return
+        }
+
+        val isColorSwatch = viewId in listOf(
+            R.id.colorYellow, R.id.colorGreen, R.id.colorBlue, R.id.colorRed, R.id.colorPurple,
+            R.id.color_yellow, R.id.color_green, R.id.color_blue, R.id.color_red, R.id.color_purple
+        )
+        if (isColorSwatch) return
+
+        if (viewId == R.id.layout_split_divider ||
+            viewId == R.id.card_split_pill ||
+            viewId == R.id.view_split_divider_line ||
+            viewId == R.id.text_split_version_divider ||
+            viewId == R.id.img_split_handle ||
+            viewId == R.id.btn_close_split_divider) {
             return
         }
 
@@ -729,6 +765,18 @@ object ThemeHelper {
         }
 
         if (view is MaterialButton) {
+            if (viewId == R.id.btnCancel) {
+                val cancelColor = getCancelButtonTextColor(view.context)
+                view.setTextColor(cancelColor)
+                view.rippleColor = ColorStateList.valueOf(ColorUtils.setAlphaComponent(cancelColor, 40))
+                return
+            }
+            if (viewId == R.id.btnSave) {
+                val primary = getPrimaryColor(view.context)
+                view.backgroundTintList = ColorStateList.valueOf(primary)
+                view.setTextColor(getContrastingTextColor(primary))
+                return
+            }
             if (viewId == R.id.btn_reset_all) {
                 val ctx = view.context
                 val isDark = isCurrentThemeDark(ctx)
@@ -777,6 +825,11 @@ object ThemeHelper {
                 CompoundButtonCompat.setButtonTintList(view, ColorStateList.valueOf(iconColor))
             }
         } else if (view is TextView) {
+            if (viewId == R.id.text_split_version_divider) {
+                // Special handling for split version label in divider
+                view.setTextColor(iconColor ?: fontColor ?: Color.BLACK)
+                return
+            }
             if (fontColor != null) {
                 view.setTextColor(fontColor)
             }
@@ -784,10 +837,27 @@ object ThemeHelper {
                 TextViewCompat.setCompoundDrawableTintList(view, ColorStateList.valueOf(iconColor))
             }
             if (view is android.widget.EditText) {
-                if (fontColor != null) {
-                    view.setHintTextColor(ColorUtils.setAlphaComponent(fontColor, 140))
-                }
+                val cardBg = getEffectiveCardColor(view.context) ?: getEffectiveToolbarColor(view.context)
+                val textColor = getContrastingTextColor(cardBg, fontColor)
+                view.setTextColor(textColor)
+                view.setHintTextColor(ColorUtils.setAlphaComponent(textColor, 120))
             }
+        } else if (view is TextInputLayout) {
+            val primary = getPrimaryColor(view.context)
+            val cardBg = getEffectiveCardColor(view.context) ?: getEffectiveToolbarColor(view.context)
+            val isDark = isColorDark(cardBg)
+            val defaultStroke = if (isDark) Color.parseColor("#40FFFFFF") else Color.parseColor("#30000000")
+            val textColor = getContrastingTextColor(cardBg, fontColor)
+            val hintColor = ColorUtils.setAlphaComponent(textColor, 180)
+
+            view.setBoxStrokeColorStateList(ColorStateList(
+                arrayOf(intArrayOf(android.R.attr.state_focused), intArrayOf()),
+                intArrayOf(primary, defaultStroke)
+            ))
+            view.setStartIconTintList(ColorStateList.valueOf(primary))
+            view.setEndIconTintList(ColorStateList.valueOf(primary))
+            view.defaultHintTextColor = ColorStateList.valueOf(hintColor)
+            view.hintTextColor = ColorStateList.valueOf(primary)
         } else if (view is ImageView) {
             if (iconColor != null) {
                 if (viewId != R.id.img_header_bg &&
@@ -872,5 +942,100 @@ object ThemeHelper {
         editor.putString(KEY_FONT_COLOR, hex)
         editor.putString(KEY_ICON_COLOR, hex)
         editor.apply()
+    }
+
+    fun getCancelButtonTextColor(context: Context): Int {
+        val cardBg = getEffectiveCardColor(context) ?: getEffectiveToolbarColor(context)
+        val isDark = isColorDark(cardBg)
+        return if (isDark) Color.parseColor("#CFD8DC") else Color.parseColor("#455A64")
+    }
+
+    fun getBookmarkSelectedStrokeColor(context: Context): Int {
+        val cardBg = getEffectiveCardColor(context) ?: getEffectiveToolbarColor(context)
+        return if (isColorDark(cardBg)) Color.WHITE else Color.BLACK
+    }
+
+    fun applyBookmarkDialogTheme(binding: DialogBookmarkBinding, context: Context) {
+        val cardBg = getEffectiveCardColor(context) ?: getEffectiveToolbarColor(context)
+        val isDark = isColorDark(cardBg)
+        val primaryColor = getPrimaryColor(context)
+        val fontColor = getEffectiveFontColor(context)
+        val textColor = getContrastingTextColor(cardBg, fontColor)
+        val hintColor = ColorUtils.setAlphaComponent(textColor, 170)
+        val outlineColor = if (isDark) Color.parseColor("#35FFFFFF") else Color.parseColor("#25000000")
+        val cancelColor = getCancelButtonTextColor(context)
+
+        // 1. Root and Card
+        binding.root.setBackgroundColor(Color.TRANSPARENT)
+        binding.cardBookmarkDialog.setCardBackgroundColor(cardBg)
+        binding.cardBookmarkDialog.strokeColor = outlineColor
+        binding.cardBookmarkDialog.strokeWidth = (1f * context.resources.displayMetrics.density).toInt()
+
+        // 2. Reference & Header Action
+        binding.textBookmarkReference.setTextColor(primaryColor)
+        binding.btnOpenAllBookmarks.setTextColor(primaryColor)
+        binding.btnOpenAllBookmarks.iconTint = ColorStateList.valueOf(primaryColor)
+
+        // 3. Inputs
+        val strokeColorStates = ColorStateList(
+            arrayOf(
+                intArrayOf(android.R.attr.state_focused),
+                intArrayOf()
+            ),
+            intArrayOf(primaryColor, outlineColor)
+        )
+        binding.layoutBookmarkTitle.setBoxStrokeColorStateList(strokeColorStates)
+        binding.layoutBookmarkTitle.setStartIconTintList(ColorStateList.valueOf(primaryColor))
+        binding.layoutBookmarkTitle.setEndIconTintList(ColorStateList.valueOf(primaryColor))
+        binding.layoutBookmarkTitle.defaultHintTextColor = ColorStateList.valueOf(hintColor)
+        binding.layoutBookmarkTitle.hintTextColor = ColorStateList.valueOf(primaryColor)
+        binding.editBookmarkTitle.setTextColor(textColor)
+        binding.editBookmarkTitle.setHintTextColor(ColorUtils.setAlphaComponent(textColor, 120))
+
+        binding.layoutBookmarkNote.setBoxStrokeColorStateList(strokeColorStates)
+        binding.layoutBookmarkNote.defaultHintTextColor = ColorStateList.valueOf(hintColor)
+        binding.layoutBookmarkNote.hintTextColor = ColorStateList.valueOf(primaryColor)
+        binding.editBookmarkNote.setTextColor(textColor)
+        binding.editBookmarkNote.setHintTextColor(ColorUtils.setAlphaComponent(textColor, 120))
+
+        // 4. Color label & Swatches
+        binding.textColorLabel.setTextColor(ColorUtils.setAlphaComponent(textColor, 180))
+
+        binding.colorYellow.setCardBackgroundColor(Color.parseColor(BOOKMARK_YELLOW))
+        binding.colorGreen.setCardBackgroundColor(Color.parseColor(BOOKMARK_GREEN))
+        binding.colorBlue.setCardBackgroundColor(Color.parseColor(BOOKMARK_BLUE))
+        binding.colorRed.setCardBackgroundColor(Color.parseColor(BOOKMARK_RED))
+        binding.colorPurple.setCardBackgroundColor(Color.parseColor(BOOKMARK_PURPLE))
+
+        // 5. Buttons
+        binding.btnCancel.setTextColor(cancelColor)
+        binding.btnCancel.rippleColor = ColorStateList.valueOf(ColorUtils.setAlphaComponent(cancelColor, 40))
+
+        binding.btnSave.backgroundTintList = ColorStateList.valueOf(primaryColor)
+        binding.btnSave.setTextColor(getContrastingTextColor(primaryColor))
+    }
+
+    fun applyBookmarkActionPopupTheme(binding: DialogBookmarkActionsBinding, context: Context) {
+        val cardBg = getEffectiveCardColor(context) ?: getEffectiveToolbarColor(context)
+        val isDark = isColorDark(cardBg)
+        val primaryColor = getPrimaryColor(context)
+        val fontColor = getEffectiveFontColor(context)
+        val textColor = getContrastingTextColor(cardBg, fontColor)
+
+        binding.root.setBackgroundColor(Color.TRANSPARENT)
+        binding.textActionReference.setTextColor(primaryColor)
+        binding.textActionSnippet.setTextColor(ColorUtils.setAlphaComponent(textColor, 180))
+
+        binding.colorYellow.setCardBackgroundColor(Color.parseColor(BOOKMARK_YELLOW))
+        binding.colorGreen.setCardBackgroundColor(Color.parseColor(BOOKMARK_GREEN))
+        binding.colorBlue.setCardBackgroundColor(Color.parseColor(BOOKMARK_BLUE))
+        binding.colorRed.setCardBackgroundColor(Color.parseColor(BOOKMARK_RED))
+        binding.colorPurple.setCardBackgroundColor(Color.parseColor(BOOKMARK_PURPLE))
+
+        binding.btnEditBookmark.setTextColor(primaryColor)
+        binding.btnEditBookmark.iconTint = ColorStateList.valueOf(primaryColor)
+        binding.btnEditBookmark.backgroundTintList = ColorStateList.valueOf(
+            ColorUtils.setAlphaComponent(primaryColor, if (isDark) 40 else 25)
+        )
     }
 }

@@ -92,11 +92,13 @@ object SmartSearchEngine {
      */
     fun buildCandidateQuery(
         version: String,
-        query: String,
+        rawQuery: String,
         bookName: String?,
         bookFilterList: List<String>?,
         isFuzzy: Boolean
     ): SupportSQLiteQuery {
+        val isExact = rawQuery.trim().startsWith("\"") && rawQuery.trim().endsWith("\"")
+        val query = if (isExact) rawQuery.trim().removeSurrounding("\"") else rawQuery
         val normalizedQuery = normalizeMizo(query)
         val queryWithoutSpace = normalizedQuery.replace(Regex("[^a-z0-9]"), "")
         val tokens = normalizedQuery.split(Regex("\\s+")).filter { it.isNotBlank() }
@@ -210,7 +212,10 @@ object SmartSearchEngine {
         rawQuery: String,
         isFuzzy: Boolean
     ): SmartSearchResult {
-        val query = rawQuery.trim()
+        val trimmedQuery = rawQuery.trim()
+        val isExact = trimmedQuery.startsWith("\"") && trimmedQuery.endsWith("\"")
+        val query = if (isExact) trimmedQuery.removeSurrounding("\"") else trimmedQuery
+        
         val normalizedQuery = normalizeMizo(query)
         val queryWithoutSpace = normalizedQuery.replace(Regex("[^a-z0-9]"), "")
         val queryTokens = normalizedQuery.split(Regex("\\s+")).filter { it.isNotBlank() }
@@ -239,7 +244,19 @@ object SmartSearchEngine {
             var score = 0.0
 
             // 1. Exact phrase matching bonuses
-            if (rawVerseText.contains(query, ignoreCase = true)) {
+            if (isExact) {
+                // Whole word boundary check for exact search using Unicode letter categories
+                // This correctly handles Mizo characters like ṭ, â, etc.
+                val regex = Regex("(?<!\\p{L})${Regex.escape(query)}(?!\\p{L})", RegexOption.IGNORE_CASE)
+                if (!regex.containsMatchIn(rawVerseText)) {
+                    // Try with normalized if raw fails
+                    val normRegex = Regex("(?<!\\p{L})${Regex.escape(normalizedQuery)}(?!\\p{L})", RegexOption.IGNORE_CASE)
+                    if (!normRegex.containsMatchIn(normVerseText)) {
+                        continue
+                    }
+                }
+                score += 100000.0 // Huge bonus for passing exact filter
+            } else if (rawVerseText.contains(query, ignoreCase = true)) {
                 score += 50000.0
             } else if (normVerseText.contains(normalizedQuery, ignoreCase = true)) {
                 score += 40000.0

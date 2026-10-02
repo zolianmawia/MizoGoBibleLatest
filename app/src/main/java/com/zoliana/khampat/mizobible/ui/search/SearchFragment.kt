@@ -727,7 +727,7 @@ class SearchFragment : Fragment() {
                     try {
                         val candidateQuery = SmartSearchEngine.buildCandidateQuery(
                             version = version,
-                            query = query,
+                            rawQuery = query,
                             bookName = repositoryBookFilter,
                             bookFilterList = bookFilterList,
                             isFuzzy = isFuzzy

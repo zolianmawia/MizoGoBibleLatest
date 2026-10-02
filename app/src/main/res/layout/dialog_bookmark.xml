@@ -4,14 +4,16 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:background="@android:color/transparent"
     android:fillViewport="true">
 
     <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_bookmark_dialog"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        app:cardCornerRadius="28dp"
-        app:cardElevation="0dp"
+        android:layout_margin="4dp"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="6dp"
         app:strokeWidth="1dp"
         app:strokeColor="?attr/colorOutline">
 
@@ -67,6 +69,7 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/layout_bookmark_note"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
@@ -102,53 +105,58 @@
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/colorYellow"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
                     android:layout_margin="6dp"
-                    app:cardCornerRadius="18dp"
+                    app:cardCornerRadius="19dp"
+                    app:cardElevation="2dp"
                     app:cardBackgroundColor="#FFF59D"
-                    app:strokeWidth="2dp"
-                    app:strokeColor="#000000" />
+                    app:strokeWidth="3dp"
+                    app:strokeColor="@android:color/transparent" />
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/colorGreen"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
                     android:layout_margin="6dp"
-                    app:cardCornerRadius="18dp"
+                    app:cardCornerRadius="19dp"
+                    app:cardElevation="2dp"
                     app:cardBackgroundColor="#C8E6C9"
-                    app:strokeWidth="2dp"
-                    app:strokeColor="#00000000" />
+                    app:strokeWidth="3dp"
+                    app:strokeColor="@android:color/transparent" />
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/colorBlue"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
                     android:layout_margin="6dp"
-                    app:cardCornerRadius="18dp"
+                    app:cardCornerRadius="19dp"
+                    app:cardElevation="2dp"
                     app:cardBackgroundColor="#BBDEFB"
-                    app:strokeWidth="2dp"
-                    app:strokeColor="#00000000" />
+                    app:strokeWidth="3dp"
+                    app:strokeColor="@android:color/transparent" />
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/colorRed"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
                     android:layout_margin="6dp"
-                    app:cardCornerRadius="18dp"
+                    app:cardCornerRadius="19dp"
+                    app:cardElevation="2dp"
                     app:cardBackgroundColor="#FFCDD2"
-                    app:strokeWidth="2dp"
-                    app:strokeColor="#00000000" />
+                    app:strokeWidth="3dp"
+                    app:strokeColor="@android:color/transparent" />
 
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/colorPurple"
-                    android:layout_width="36dp"
-                    android:layout_height="36dp"
+                    android:layout_width="38dp"
+                    android:layout_height="38dp"
                     android:layout_margin="6dp"
-                    app:cardCornerRadius="18dp"
+                    app:cardCornerRadius="19dp"
+                    app:cardElevation="2dp"
                     app:cardBackgroundColor="#E1BEE7"
-                    app:strokeWidth="2dp"
-                    app:strokeColor="#00000000" />
+                    app:strokeWidth="3dp"
+                    app:strokeColor="@android:color/transparent" />
             </LinearLayout>
 
             <LinearLayout
@@ -160,17 +168,21 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnCancel"
-                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Cancel" />
+                    android:text="Cancel"
+                    android:textStyle="bold"
+                    android:textSize="14.5sp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnSave"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:text="Save" />
+                    android:text="Save"
+                    android:textStyle="bold"
+                    app:cornerRadius="20dp" />
             </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>

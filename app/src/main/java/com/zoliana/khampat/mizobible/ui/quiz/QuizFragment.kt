@@ -6,13 +6,16 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.GradientDrawable
 import android.media.MediaPlayer
 import android.os.*
 import android.view.*
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.fragment.app.DialogFragment
@@ -27,6 +30,7 @@ import com.zoliana.khampat.mizobible.data.UserDatabase
 import com.zoliana.khampat.mizobible.databinding.FragmentQuizBinding
 import com.zoliana.khampat.mizobible.ui.transform.TransformViewModel
 import com.zoliana.khampat.mizobible.ui.transform.TransformViewModelFactory
+import com.zoliana.khampat.mizobible.utils.ThemeHelper
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -85,6 +89,7 @@ class QuizFragment : DialogFragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         isCancelable = false
+        applyTheme()
 
         binding.btnClose.setOnClickListener { exitQuiz() }
         binding.btnMinimize.setOnClickListener { toggleMinimize() }
@@ -92,7 +97,8 @@ class QuizFragment : DialogFragment() {
         binding.btnStartQuizMain.setOnClickListener {
             isQuizStarted = true
             binding.instructionsCard.visibility = View.GONE
-            binding.quizDimBackground.setBackgroundColor(Color.TRANSPARENT)
+            binding.quizDimBackground.visibility = View.VISIBLE
+            binding.quizDimBackground.setBackgroundColor(Color.parseColor("#99000000"))
             dialog?.window?.apply {
                 setBackgroundDrawable(ColorDrawable(Color.TRANSPARENT))
                 setDimAmount(0.6f)
@@ -307,6 +313,70 @@ class QuizFragment : DialogFragment() {
         }.start()
     }
 
+    private fun applyTheme() {
+        val ctx = context ?: return
+        val isDark = ThemeHelper.isCurrentThemeDark(ctx)
+        val density = resources.displayMetrics.density
+
+        val cardColor = if (isDark) {
+            ThemeHelper.getEffectiveCardColor(ctx) ?: Color.parseColor("#1C1E2D")
+        } else {
+            Color.parseColor("#FFFFFF")
+        }
+        val primaryColor = ThemeHelper.getPrimaryColor(ctx)
+        val textColor = if (isDark) Color.parseColor("#FFFFFF") else Color.parseColor("#1A202C")
+        val subTextColor = if (isDark) Color.parseColor("#CBD5E1") else Color.parseColor("#4A5568")
+        val strokeColor = if (isDark) Color.parseColor("#4B5563") else Color.parseColor("#CBD5E1")
+
+        // 1. Scrim
+        binding.quizDimBackground.setBackgroundColor(Color.parseColor("#99000000"))
+
+        // 2. Instructions Card
+        binding.instructionsCard.setCardBackgroundColor(cardColor)
+        binding.instructionsCard.strokeColor = strokeColor
+        binding.instructionsCard.strokeWidth = (1.5f * density).toInt()
+        binding.textQuizInstructionsTitle?.setTextColor(primaryColor)
+        binding.textQuizInstructions.setTextColor(textColor)
+        binding.btnStartQuizMain.backgroundTintList = ColorStateList.valueOf(primaryColor)
+        binding.btnStartQuizMain.setTextColor(ThemeHelper.getContrastingTextColor(primaryColor))
+
+        // 3. Quiz Window Card
+        binding.quizWindowCard.setCardBackgroundColor(cardColor)
+        binding.quizWindowCard.strokeColor = strokeColor
+        binding.quizWindowCard.strokeWidth = (1.5f * density).toInt()
+
+        val headerBarBg = if (isDark) Color.parseColor("#26283B") else ColorUtils.setAlphaComponent(primaryColor, 22)
+        binding.quizHeaderBar.setBackgroundColor(headerBarBg)
+        binding.textQuizTitle.setTextColor(primaryColor)
+        binding.btnMinimize.setColorFilter(primaryColor)
+        binding.btnClose.setColorFilter(Color.parseColor("#E53935"))
+
+        binding.textTimer.setTextColor(Color.parseColor("#E53935"))
+        binding.textQuestionCount.setTextColor(subTextColor)
+
+        val questionBoxBg = if (isDark) Color.parseColor("#25283E") else Color.parseColor("#F1F5F9")
+        val questionBoxStroke = if (isDark) Color.parseColor("#475569") else ColorUtils.setAlphaComponent(primaryColor, 130)
+        val qDrawable = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 16f * density
+            setColor(questionBoxBg)
+            setStroke((1.5f * density).toInt(), questionBoxStroke)
+        }
+        binding.layoutQuestion.background = qDrawable
+        binding.textQuestion.setTextColor(textColor)
+        binding.textQuestion.setTypeface(null, Typeface.BOLD)
+
+        binding.btnNext.backgroundTintList = ColorStateList.valueOf(primaryColor)
+        binding.btnNext.setTextColor(ThemeHelper.getContrastingTextColor(primaryColor))
+
+        resetButtonStyles()
+    }
+
+    override fun onResume() {
+        super.onResume()
+        applyTheme()
+    }
+
     private fun checkAnswer(selected: String) {
         if (currentSet.isEmpty() || currentIndex >= currentSet.size) return
         countDownTimer?.cancel(); enableButtons(false)
@@ -314,14 +384,49 @@ class QuizFragment : DialogFragment() {
         val isCorrect = selected.equals(q.answer, ignoreCase = true)
         val selectedButton = when (selected) { "A" -> binding.btnOptionA; "B" -> binding.btnOptionB; "C" -> binding.btnOptionC; "D" -> binding.btnOptionD; else -> null }
         val correctButton = when (q.answer) { "A" -> binding.btnOptionA; "B" -> binding.btnOptionB; "C" -> binding.btnOptionC; "D" -> binding.btnOptionD; else -> null }
+        val density = resources.displayMetrics.density
+
         if (isCorrect) {
             score++; playSound("correctans.mpeg")
-            selectedButton?.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#4CAF50"))
+            selectedButton?.let { btn ->
+                val correctBg = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 12f * density
+                    setColor(Color.parseColor("#2E7D32"))
+                    setStroke((2f * density).toInt(), Color.parseColor("#81C784"))
+                }
+                btn.background = correctBg
+                btn.backgroundTintList = null
+                btn.setTextColor(Color.WHITE)
+            }
         } else {
             vibratePhone(); playSound("wrongans.mpeg")
-            selectedButton?.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#F44336"))
-            selectedButton?.let { val animator = ObjectAnimator.ofFloat(it, "alpha", 1f, 0.2f, 1f); animator.duration = 200; animator.repeatCount = 3; animator.start() }
-            correctButton?.backgroundTintList = ColorStateList.valueOf(Color.parseColor("#4CAF50"))
+            selectedButton?.let { btn ->
+                val wrongBg = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 12f * density
+                    setColor(Color.parseColor("#C62828"))
+                    setStroke((2f * density).toInt(), Color.parseColor("#EF9A9A"))
+                }
+                btn.background = wrongBg
+                btn.backgroundTintList = null
+                btn.setTextColor(Color.WHITE)
+                val animator = ObjectAnimator.ofFloat(btn, "alpha", 1f, 0.3f, 1f)
+                animator.duration = 200
+                animator.repeatCount = 3
+                animator.start()
+            }
+            correctButton?.let { btn ->
+                val correctBg = GradientDrawable().apply {
+                    shape = GradientDrawable.RECTANGLE
+                    cornerRadius = 12f * density
+                    setColor(Color.parseColor("#2E7D32"))
+                    setStroke((2f * density).toInt(), Color.parseColor("#81C784"))
+                }
+                btn.background = correctBg
+                btn.backgroundTintList = null
+                btn.setTextColor(Color.WHITE)
+            }
         }
         binding.btnNext.visibility = View.VISIBLE
     }
@@ -344,7 +449,29 @@ class QuizFragment : DialogFragment() {
         else @Suppress("DEPRECATION") vibrator.vibrate(300)
     }
 
-    private fun resetButtonStyles() { listOf(binding.btnOptionA, binding.btnOptionB, binding.btnOptionC, binding.btnOptionD).forEach { it.backgroundTintList = null } }
+    private fun resetButtonStyles() {
+        val ctx = context ?: return
+        val isDark = ThemeHelper.isCurrentThemeDark(ctx)
+        val density = resources.displayMetrics.density
+
+        val optBgColor = if (isDark) Color.parseColor("#282B40") else Color.parseColor("#F8FAFC")
+        val optStrokeColor = if (isDark) Color.parseColor("#4A4F6B") else Color.parseColor("#CBD5E1")
+        val optTextColor = if (isDark) Color.parseColor("#FFFFFF") else Color.parseColor("#1A202C")
+
+        listOf(binding.btnOptionA, binding.btnOptionB, binding.btnOptionC, binding.btnOptionD).forEach { btn ->
+            val optDrawable = GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = 12f * density
+                setColor(optBgColor)
+                setStroke((1.5f * density).toInt(), optStrokeColor)
+            }
+            btn.background = optDrawable
+            btn.backgroundTintList = null
+            btn.setTextColor(optTextColor)
+            btn.setTypeface(null, Typeface.BOLD)
+            btn.alpha = 1.0f
+        }
+    }
     private fun enableButtons(enabled: Boolean) { binding.btnOptionA.isEnabled = enabled; binding.btnOptionB.isEnabled = enabled; binding.btnOptionC.isEnabled = enabled; binding.btnOptionD.isEnabled = enabled }
 
     override fun onDestroyView() { countDownTimer?.cancel(); super.onDestroyView(); _binding = null }

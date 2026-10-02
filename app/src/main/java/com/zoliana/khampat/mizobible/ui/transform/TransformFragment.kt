@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
@@ -26,10 +27,12 @@ import android.widget.LinearLayout
 import android.widget.PopupWindow
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updatePadding
+import androidx.core.widget.ImageViewCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -41,6 +44,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetDialog
+import com.google.android.material.card.MaterialCardView
 import com.google.firebase.auth.FirebaseAuth
 import com.zoliana.khampat.mizobible.MainActivity
 import com.zoliana.khampat.mizobible.R
@@ -116,6 +120,13 @@ class TransformFragment : Fragment() {
         binding?.recyclerviewBibleSplit?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
             updateBiblePaddings()
         }
+        (activity as? MainActivity)?.binding?.appBarMain?.bottomContainer?.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
+            updateBiblePaddings()
+        }
+        ViewCompat.setOnApplyWindowInsetsListener(view) { _, insets ->
+            updateBiblePaddings()
+            insets
+        }
 
         bibleAdapter = BibleAdapter { verse, anchor -> handleVerseSelection(verse, anchor, false) }
         binding?.recyclerviewBible?.adapter = bibleAdapter
@@ -123,7 +134,6 @@ class TransformFragment : Fragment() {
             BibleAdapter { verse, anchor -> handleVerseSelection(verse, anchor, true) }
         binding?.recyclerviewBibleSplit?.adapter = splitBibleAdapter
 
-        setupSplitResizeLogic()
         setupPinchAndSwipeGestures()
         setupDragAndDrop()
 
@@ -256,23 +266,43 @@ class TransformFragment : Fragment() {
         // View Mode observers
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.isSplitMode.collectLatest { isSplit ->
-                    binding?.recyclerviewBibleSplit?.visibility =
-                        if (isSplit) View.VISIBLE else View.GONE
-                    binding?.splitDividerContainer?.visibility =
-                        if (isSplit) View.VISIBLE else View.GONE
-                    updateBiblePaddings()
+                combine(viewModel.isSplitMode, viewModel.isVerticalSplit, viewModel.splitRatio) { isSplit, isVertical, ratio ->
+                    Triple(isSplit, isVertical, ratio)
+                }.collectLatest { (isSplit, isVertical, ratio) ->
+                    binding?.recyclerviewBibleSplit?.visibility = if (isSplit) View.VISIBLE else View.GONE
+                    binding?.layoutSplitDivider?.root?.visibility = if (isSplit) View.VISIBLE else View.GONE
+                    updateSplitLayout(isVertical, ratio)
                 }
             }
         }
 
+        // Split version observer
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.isVerticalSplit.collectLatest { isVertical ->
-                    updateSplitLayout(isVertical)
+                viewModel.splitVersion.collectLatest { version ->
+                    binding?.layoutSplitDivider?.textSplitVersionDivider?.text = MainActivity.getVersionDisplayName(version)
                 }
             }
         }
+
+        // Split divider click listeners
+        binding?.layoutSplitDivider?.textSplitVersionDivider?.setOnClickListener {
+            (activity as? MainActivity)?.showSplitVersionSelectionDialog()
+        }
+        binding?.layoutSplitDivider?.btnCloseSplitDivider?.setOnClickListener {
+            viewModel.setSplitMode(false)
+        }
+
+        // Theme observer for divider
+        viewLifecycleOwner.lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                // Just re-apply on start, MainActivity calls applyThemeColors which triggers fragmentation if we had a callback,
+                // but here we can just apply it based on current theme state.
+                applyDividerTheme()
+            }
+        }
+
+        setupSplitDividerDragging()
 
         viewLifecycleOwner.lifecycleScope.launch {
             viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -283,21 +313,7 @@ class TransformFragment : Fragment() {
             }
         }
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                viewModel.splitVersion.collectLatest { version ->
-                    binding?.textParallelLineVersion?.text = MainActivity.getVersionDisplayName(version)
-                }
-            }
-        }
 
-        binding?.textParallelLineVersion?.setOnClickListener {
-            (activity as? MainActivity)?.showSplitVersionSelectionDialog()
-        }
-
-        binding?.btnParallelLineClose?.setOnClickListener {
-            viewModel.setSplitMode(false)
-        }
 
         // Chapter title animation on scroll
         binding?.appBar?.addOnOffsetChangedListener(AppBarLayout.OnOffsetChangedListener { appBarLayout, verticalOffset ->
@@ -500,68 +516,11 @@ class TransformFragment : Fragment() {
             b.recyclerviewBible.setBackgroundColor(toolbarColor)
             b.recyclerviewBibleSplit.setBackgroundColor(toolbarColor)
             b.textChapterTitle.setTextColor(textColor)
-            updateSplitDividerTheme()
         }
         bibleAdapter?.notifyDataSetChanged()
         splitBibleAdapter?.notifyDataSetChanged()
     }
 
-    private fun updateSplitDividerTheme() {
-        val b = binding ?: return
-        val ctx = context ?: return
-        val toolbarColor = ThemeHelper.getEffectiveToolbarColor(ctx)
-        val cardColor = ThemeHelper.getEffectiveCardColor(ctx) ?: toolbarColor
-        val primaryColor = ThemeHelper.getPrimaryColor(ctx)
-        val opacity = ThemeHelper.getThemeOpacity(ctx)
-        val isDark = ThemeHelper.isColorDark(toolbarColor)
-        val density = resources.displayMetrics.density
-
-        // Blend amount increases with theme opacity so when dragged to the right, divider gets richer!
-        val blendFactor = (0.28f + (opacity * 0.32f)).coerceIn(0.25f, 0.65f)
-        val dividerBg = if (isDark) {
-            ColorUtils.blendARGB(toolbarColor, primaryColor, blendFactor)
-        } else {
-            ColorUtils.blendARGB(cardColor, primaryColor, blendFactor)
-        }
-        val strokeAlpha = (120 + (opacity * 135)).toInt().coerceIn(120, 255)
-        val dividerStroke = ColorUtils.setAlphaComponent(primaryColor, strokeAlpha)
-
-        val dividerDrawable = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            setColor(dividerBg)
-            setStroke((1.5f * density).toInt(), dividerStroke)
-        }
-        b.splitDividerLine.background = dividerDrawable
-        b.splitDividerContainer.setBackgroundColor(Color.TRANSPARENT)
-
-        // The center circular handle
-        b.splitHandle.setCardBackgroundColor(primaryColor)
-        val handleIconColor = ThemeHelper.getContrastingTextColor(primaryColor)
-        b.splitHandle.strokeColor = ColorUtils.setAlphaComponent(handleIconColor, 100)
-        b.splitHandle.strokeWidth = (1 * density).toInt()
-        b.textHandleIcon.setColorFilter(handleIconColor)
-
-        // Split controls text and buttons (for horizontal split / portrait)
-        val versionBg = GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = 12 * density
-            setColor(ColorUtils.setAlphaComponent(primaryColor, if (isDark) 50 else 35))
-            setStroke((1 * density).toInt(), ColorUtils.setAlphaComponent(primaryColor, 110))
-        }
-        b.textParallelLineVersion.background = versionBg
-        b.textParallelLineVersion.setTextColor(primaryColor)
-        androidx.core.widget.TextViewCompat.setCompoundDrawableTintList(
-            b.textParallelLineVersion,
-            ColorStateList.valueOf(primaryColor)
-        )
-
-        val closeBg = GradientDrawable().apply {
-            shape = GradientDrawable.OVAL
-            setColor(ColorUtils.setAlphaComponent(primaryColor, if (isDark) 45 else 25))
-        }
-        b.btnParallelLineClose.background = closeBg
-        b.btnParallelLineClose.setColorFilter(primaryColor)
-    }
 
     override fun onResume() {
         super.onResume()
@@ -590,41 +549,11 @@ class TransformFragment : Fragment() {
         readingTimerJob = null
     }
 
-    private fun updateSplitLayout(isVertical: Boolean) {
+    private fun updateSplitLayout(isVertical: Boolean, ratio: Float) {
         val container = binding?.layoutBibleContainer ?: return
-        val dividerContainer = binding?.splitDividerContainer ?: return
-        val dividerLine = binding?.splitDividerLine ?: return
-        val splitHandle = binding?.splitHandle ?: return
-
         container.orientation = if (isVertical) LinearLayout.HORIZONTAL else LinearLayout.VERTICAL
-
-        binding?.textHandleIcon?.animate()?.rotation(if (isVertical) 0f else 90f)?.setDuration(400)
-            ?.start()
-
-        val density = resources.displayMetrics.density
-        val dividerHeight = (36 * density).toInt()
-        val dividerWidth = (16 * density).toInt()
-        val handleSize = (24 * density).toInt() //icon
-
-        dividerContainer.layoutParams = if (isVertical) {
-            LinearLayout.LayoutParams(dividerWidth, ViewGroup.LayoutParams.MATCH_PARENT)
-        } else {
-            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dividerHeight)
-        }
-        dividerLine.layoutParams = if (isVertical) {
-            FrameLayout.LayoutParams(dividerWidth, ViewGroup.LayoutParams.MATCH_PARENT)
-                .apply { gravity = Gravity.CENTER_HORIZONTAL }
-        } else {
-            FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
-                .apply { gravity = Gravity.CENTER }
-        }
-        splitHandle.layoutParams = FrameLayout.LayoutParams(handleSize, handleSize).apply {
-            gravity = Gravity.CENTER
-        }
-        binding?.layoutSplitBarControls?.visibility = if (isVertical) View.GONE else View.VISIBLE
-        updateSplitDividerTheme()
         updateBiblePaddings()
-        setBibleWeights(1f, 1f, isVertical)
+        setBibleWeights(ratio, isVertical)
     }
 
     private fun updateBiblePaddings() {
@@ -635,121 +564,406 @@ class TransformFragment : Fragment() {
         val rv1 = binding?.recyclerviewBible ?: return
         val rv2 = binding?.recyclerviewBibleSplit ?: return
 
-        // clipToPadding must be false so that when reading or scrolling,
-        // the verses flow continuously all the way to the bottom edge of the screen,
-        // without leaving any empty blank strip/background gap.
+        // clipToPadding = false allows verses to fill the entire visible pane without being cut off
+        // by bottom padding. layout_bible_container (clipChildren = true) strictly clips each pane
+        // to its own bounds, preventing any cross-pane overflow.
         rv1.clipToPadding = false
         rv2.clipToPadding = false
 
-        val left = rv1.paddingLeft
-        val right = rv1.paddingRight
-        val top = rv1.paddingTop
+        val basePadding = (16 * density).toInt()
+        val dividerSidePadding = (22 * density).toInt() // Clear of 16dp pill half-width so verses are never covered
 
-        val bottomNavPadding = (76 * density).toInt()
+        val left = basePadding
+        val right = if (isSplit && isVertical) dividerSidePadding else basePadding
 
-        val screenHeight = resources.displayMetrics.heightPixels
-        // User request: Bible verse hi phone screen hnuailam scroll a nih in,
-        // phone screen zatve hnuailam thui thei angber scroll theih nise,
-        // a chhan chu chapter leh verse thlakna a in hide 3 sec nghah zel a ngaih vang a chhiar mai theih loh fix nan.
-        // Provide generous bottom padding (approx 60% of screen height / container height).
-        // Since clipToPadding is false, verses render across the entire screen during reading,
-        // but when scrolling towards the bottom/end of the chapter, the verses can be scrolled all the
-        // way up past the bottom half of the phone screen, comfortably clear of the bottom chapter/verse switcher.
-        val availableHeight = if (rv1.height > 0) rv1.height else screenHeight
-        val halfScreenScrollPadding = maxOf((availableHeight * 0.60f).toInt(), (screenHeight * 0.55f).toInt(), (400 * density).toInt())
+        val top = 0
 
+        // Calculate bottom clearance so the last verse can always scroll comfortably ABOVE
+        // the bottom floating navigation bar and the system 3-button navigation bar (Recent / Home / Back).
+        val mainActivity = activity as? MainActivity
+        val bottomContainer = mainActivity?.binding?.appBarMain?.bottomContainer
+        val windowInsets = ViewCompat.getRootWindowInsets(rv1)
+            ?: activity?.window?.decorView?.let { ViewCompat.getRootWindowInsets(it) }
+        val systemNavBottom = windowInsets?.getInsets(WindowInsetsCompat.Type.systemBars())?.bottom ?: 0
+
+        // 3-button system nav bar is ~48dp. Floating selector card is 54dp + 12dp margin = 66dp.
+        val measuredContainerHeight = bottomContainer?.height ?: 0
+        val baseObstacleHeight = ((48 + 66) * density).toInt() + systemNavBottom
+        val effectiveObstacleHeight = maxOf(measuredContainerHeight, baseObstacleHeight)
+
+        // User request: "bible verse hnuai lam hi split tibuai lo turin chawisan leh deuh theih em?
+        // System back/home/recent chung ah text lang tho turin, phone thenkhat ah in hide hma nghah a ngai thin a"
+        // Add 100dp of clearance above the bottom bar so verses rest clearly in the open above system buttons and floating bar.
+        val clearanceAboveBar = (100 * density).toInt()
+        val screenBottomPadding = maxOf(effectiveObstacleHeight + clearanceAboveBar, (220 * density).toInt())
+
+        // Top pane (rv1) in horizontal split ends at the divider line in the middle of the screen
+        // and has NO bottom bar or system nav bar over it. It only needs modest padding (24dp)
+        // so its last verse does not touch the divider pill ("split tibuai lo turin").
+        // In vertical split or single-pane mode, rv1 extends to the bottom of the screen and needs full clearance.
         val rv1Bottom = if (isSplit && !isVertical) {
-            val topPaneHeight = if (rv1.height > 0) rv1.height else screenHeight / 2
-            maxOf((topPaneHeight * 0.55f).toInt(), (200 * density).toInt())
+            (24 * density).toInt()
         } else {
-            halfScreenScrollPadding
+            screenBottomPadding
         }
 
-        if (rv1.paddingBottom != rv1Bottom || rv1.paddingTop != top) {
+        if (rv1.paddingBottom != rv1Bottom || rv1.paddingTop != top || rv1.paddingRight != right) {
             rv1.setPadding(left, top, right, rv1Bottom)
         }
 
-        val left2 = rv2.paddingLeft
-        val right2 = rv2.paddingRight
-        val rv2Top = if (isSplit && !isVertical) (8 * density).toInt() else 0
+        val left2 = if (isSplit && isVertical) dividerSidePadding else basePadding
+        val right2 = basePadding
+        // In horizontal split, give rv2 top padding (20dp) so when resting at initial scroll,
+        // the first verse text is completely visible and never obscured by the 16dp pill half-height.
+        // With clipToPadding = false, scrolling up smoothly glides under the pill up to the divider line.
+        val rv2Top = if (isSplit && !isVertical) (20 * density).toInt() else 0
 
-        val rv2Bottom = if (isSplit && !isVertical) {
-            val bottomPaneHeight = if (rv2.height > 0) rv2.height else screenHeight / 2
-            maxOf((bottomPaneHeight * 0.55f).toInt(), (200 * density).toInt()) + bottomNavPadding
-        } else {
-            halfScreenScrollPadding
-        }
+        // Bottom pane (rv2) always sits at the bottom of the screen over the bottom navigation bar
+        val rv2Bottom = screenBottomPadding
 
-        if (rv2.paddingBottom != rv2Bottom || rv2.paddingTop != rv2Top) {
+        if (rv2.paddingBottom != rv2Bottom || rv2.paddingTop != rv2Top || rv2.paddingLeft != left2) {
             rv2.setPadding(left2, rv2Top, right2, rv2Bottom)
         }
     }
 
-    private fun setupSplitResizeLogic() {
+
+    private fun setBibleWeights(ratio: Float, isVertical: Boolean) {
+        val rv1 = binding?.recyclerviewBible ?: return
+        val rv2 = binding?.recyclerviewBibleSplit ?: return
+        val dividerBinding = binding?.layoutSplitDivider ?: return
+        val divider = dividerBinding.root
+        val isSplit = viewModel.isSplitMode.value
+        val density = resources.displayMetrics.density
+
+        val lp1 = rv1.layoutParams as? LinearLayout.LayoutParams ?: LinearLayout.LayoutParams(0, 0)
+        val lp2 = rv2.layoutParams as? LinearLayout.LayoutParams ?: LinearLayout.LayoutParams(0, 0)
+        val lpd = divider.layoutParams as? LinearLayout.LayoutParams ?: LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.WRAP_CONTENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
+        )
+
+        if (!isSplit) {
+            lp1.width = ViewGroup.LayoutParams.MATCH_PARENT
+            lp1.height = ViewGroup.LayoutParams.MATCH_PARENT
+            lp1.weight = 1f
+            lp1.setMargins(0, 0, 0, 0)
+            lp2.setMargins(0, 0, 0, 0)
+            lpd.setMargins(0, 0, 0, 0)
+            rv1.layoutParams = lp1
+            return
+        }
+
+        val clampedRatio = ratio.coerceIn(0.15f, 0.85f)
+
+        if (isVertical) {
+            // VERTICAL Split (left and right panes side-by-side)
+            // Balanced 32dp pill width - clean, visible, and comfortable to use
+            val pillWidth = (32 * density).toInt()
+            val halfPillWidth = pillWidth / 2
+
+            lp1.width = 0
+            lp1.height = ViewGroup.LayoutParams.MATCH_PARENT
+            lp1.weight = clampedRatio
+            lp1.setMargins(0, 0, 0, 0)
+
+            lp2.width = 0
+            lp2.height = ViewGroup.LayoutParams.MATCH_PARENT
+            lp2.weight = 1f - clampedRatio
+            lp2.setMargins(-halfPillWidth, 0, 0, 0)
+
+            lpd.width = pillWidth
+            lpd.height = ViewGroup.LayoutParams.MATCH_PARENT
+            lpd.weight = 0f
+            lpd.setMargins(-halfPillWidth, 0, 0, 0)
+
+            // Line is vertical (1dp width, full height)
+            val lineParams = dividerBinding.viewSplitDividerLine.layoutParams as? FrameLayout.LayoutParams
+                ?: FrameLayout.LayoutParams((1f * density).toInt(), ViewGroup.LayoutParams.MATCH_PARENT)
+            lineParams.width = (1f * density).toInt()
+            lineParams.height = ViewGroup.LayoutParams.MATCH_PARENT
+            lineParams.gravity = Gravity.CENTER
+            dividerBinding.viewSplitDividerLine.layoutParams = lineParams
+
+            // Central pill is vertical - comfortable proportions
+            dividerBinding.layoutSplitPillContent.orientation = LinearLayout.VERTICAL
+            dividerBinding.layoutSplitPillContent.setPadding(
+                0,
+                (14 * density).toInt(),
+                0,
+                (14 * density).toInt()
+            )
+
+            val cardParams = dividerBinding.cardSplitPill.layoutParams as? FrameLayout.LayoutParams
+                ?: FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            cardParams.width = pillWidth
+            cardParams.height = ViewGroup.LayoutParams.WRAP_CONTENT
+            cardParams.gravity = Gravity.CENTER
+            dividerBinding.cardSplitPill.layoutParams = cardParams
+            dividerBinding.cardSplitPill.radius = 16f * density
+
+            // Resize handle
+            val handleLp = dividerBinding.imgSplitHandle.layoutParams as? LinearLayout.LayoutParams
+                ?: LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            handleLp.width = (22 * density).toInt()
+            handleLp.height = (22 * density).toInt()
+            handleLp.gravity = Gravity.CENTER_HORIZONTAL
+            dividerBinding.imgSplitHandle.layoutParams = handleLp
+            dividerBinding.imgSplitHandle.setPadding((2 * density).toInt(), (2 * density).toInt(), (2 * density).toInt(), (2 * density).toInt())
+            dividerBinding.imgSplitHandle.rotation = -90f
+
+            // Close button
+            val closeLp = dividerBinding.btnCloseSplitDivider.layoutParams as? LinearLayout.LayoutParams
+                ?: LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            closeLp.width = (22 * density).toInt()
+            closeLp.height = (22 * density).toInt()
+            closeLp.gravity = Gravity.CENTER_HORIZONTAL
+            dividerBinding.btnCloseSplitDivider.layoutParams = closeLp
+            dividerBinding.btnCloseSplitDivider.setPadding((2 * density).toInt(), (2 * density).toInt(), (2 * density).toInt(), (2 * density).toInt())
+
+            // Version text
+            val versionStr = viewModel.splitVersion.value
+            dividerBinding.textSplitVersionDivider.text = MainActivity.getVersionDisplayName(versionStr)
+            dividerBinding.textSplitVersionDivider.textSize = 11f
+            dividerBinding.textSplitVersionDivider.isSingleLine = true
+            dividerBinding.textSplitVersionDivider.maxLines = 1
+            dividerBinding.textSplitVersionDivider.rotation = -90f
+            dividerBinding.textSplitVersionDivider.setPadding(0, 0, 0, 0)
+            dividerBinding.textSplitVersionDivider.gravity = Gravity.CENTER
+
+            val arrow = ContextCompat.getDrawable(requireContext(), R.drawable.ic_arrow_drop_down_24)?.mutate()
+            val arrowSize = (12 * density).toInt()
+            arrow?.setBounds(0, 0, arrowSize, arrowSize)
+            dividerBinding.textSplitVersionDivider.setCompoundDrawables(null, null, arrow, null)
+            dividerBinding.textSplitVersionDivider.compoundDrawablePadding = (2 * density).toInt()
+
+            val versionLp = dividerBinding.textSplitVersionDivider.layoutParams as? LinearLayout.LayoutParams
+                ?: LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            versionLp.width = (64 * density).toInt()
+            versionLp.height = pillWidth
+            versionLp.gravity = Gravity.CENTER_HORIZONTAL
+            versionLp.setMargins(0, (18 * density).toInt(), 0, (18 * density).toInt())
+            dividerBinding.textSplitVersionDivider.layoutParams = versionLp
+
+        } else {
+            // HORIZONTAL Split (top and bottom panes)
+            // Balanced 32dp pill height - comfortable, clear text and icons, perfect capsule
+            val pillHeight = (32 * density).toInt()
+            val halfPillHeight = pillHeight / 2
+
+            lp1.width = ViewGroup.LayoutParams.MATCH_PARENT
+            lp1.height = 0
+            lp1.weight = clampedRatio
+            lp1.setMargins(0, 0, 0, 0)
+
+            lp2.width = ViewGroup.LayoutParams.MATCH_PARENT
+            lp2.height = 0
+            lp2.weight = 1f - clampedRatio
+            lp2.setMargins(0, -halfPillHeight, 0, 0)
+
+            lpd.width = ViewGroup.LayoutParams.MATCH_PARENT
+            lpd.height = pillHeight
+            lpd.weight = 0f
+            lpd.setMargins(0, -halfPillHeight, 0, 0)
+
+            // Line is horizontal (full width, 1dp height)
+            val lineParams = dividerBinding.viewSplitDividerLine.layoutParams as? FrameLayout.LayoutParams
+                ?: FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (1f * density).toInt())
+            lineParams.width = ViewGroup.LayoutParams.MATCH_PARENT
+            lineParams.height = (1f * density).toInt()
+            lineParams.gravity = Gravity.CENTER
+            dividerBinding.viewSplitDividerLine.layoutParams = lineParams
+
+            // Central pill is horizontal
+            dividerBinding.layoutSplitPillContent.orientation = LinearLayout.HORIZONTAL
+            dividerBinding.layoutSplitPillContent.setPadding(
+                (12 * density).toInt(),
+                (2 * density).toInt(),
+                (12 * density).toInt(),
+                (2 * density).toInt()
+            )
+
+            val cardParams = dividerBinding.cardSplitPill.layoutParams as? FrameLayout.LayoutParams
+                ?: FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            cardParams.width = ViewGroup.LayoutParams.WRAP_CONTENT
+            cardParams.height = pillHeight
+            cardParams.gravity = Gravity.CENTER
+            dividerBinding.cardSplitPill.layoutParams = cardParams
+            dividerBinding.cardSplitPill.radius = 16f * density
+
+            val handleLp = dividerBinding.imgSplitHandle.layoutParams as? LinearLayout.LayoutParams
+                ?: LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            handleLp.width = (22 * density).toInt()
+            handleLp.height = (22 * density).toInt()
+            handleLp.gravity = Gravity.CENTER_VERTICAL
+            dividerBinding.imgSplitHandle.layoutParams = handleLp
+            dividerBinding.imgSplitHandle.setPadding((2 * density).toInt(), (2 * density).toInt(), (2 * density).toInt(), (2 * density).toInt())
+            dividerBinding.imgSplitHandle.rotation = 0f
+
+            val closeLp = dividerBinding.btnCloseSplitDivider.layoutParams as? LinearLayout.LayoutParams
+                ?: LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            closeLp.width = (22 * density).toInt()
+            closeLp.height = (22 * density).toInt()
+            closeLp.gravity = Gravity.CENTER_VERTICAL
+            dividerBinding.btnCloseSplitDivider.layoutParams = closeLp
+            dividerBinding.btnCloseSplitDivider.setPadding((2 * density).toInt(), (2 * density).toInt(), (2 * density).toInt(), (2 * density).toInt())
+
+            val versionStr = viewModel.splitVersion.value
+            dividerBinding.textSplitVersionDivider.text = MainActivity.getVersionDisplayName(versionStr)
+            dividerBinding.textSplitVersionDivider.textSize = 12f
+            dividerBinding.textSplitVersionDivider.isSingleLine = true
+            dividerBinding.textSplitVersionDivider.maxLines = 1
+            dividerBinding.textSplitVersionDivider.rotation = 0f
+            dividerBinding.textSplitVersionDivider.setPadding(
+                (5 * density).toInt(),
+                0,
+                (5 * density).toInt(),
+                0
+            )
+            dividerBinding.textSplitVersionDivider.gravity = Gravity.CENTER
+
+            val arrow = ContextCompat.getDrawable(requireContext(), R.drawable.ic_arrow_drop_down_24)?.mutate()
+            val arrowSize = (14 * density).toInt()
+            arrow?.setBounds(0, 0, arrowSize, arrowSize)
+            dividerBinding.textSplitVersionDivider.setCompoundDrawables(null, null, arrow, null)
+            dividerBinding.textSplitVersionDivider.compoundDrawablePadding = (2 * density).toInt()
+
+            val versionLp = dividerBinding.textSplitVersionDivider.layoutParams as? LinearLayout.LayoutParams
+                ?: LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            versionLp.width = ViewGroup.LayoutParams.WRAP_CONTENT
+            versionLp.height = ViewGroup.LayoutParams.WRAP_CONTENT
+            versionLp.gravity = Gravity.CENTER_VERTICAL
+            versionLp.setMargins((6 * density).toInt(), 0, (6 * density).toInt(), 0)
+            dividerBinding.textSplitVersionDivider.layoutParams = versionLp
+        }
+
+        // Elevation to ensure divider and pill sit cleanly on top of verses scrolling underneath
+        divider.elevation = 4f * density
+        divider.translationZ = 2f * density
+        rv1.elevation = 0f
+        rv2.elevation = 0f
+
+        rv1.layoutParams = lp1
+        rv2.layoutParams = lp2
+        divider.layoutParams = lpd
+
+        applyDividerTheme()
+    }
+
+    private fun applyDividerTheme() {
+        val ctx = context ?: return
+        val dividerBinding = binding?.layoutSplitDivider ?: return
+        val dividerRoot = dividerBinding.root
+        val pillCard = dividerBinding.cardSplitPill
+        val dividerLine = dividerBinding.viewSplitDividerLine
+
+        val isDark = ThemeHelper.isCurrentThemeDark(ctx)
+        val bgColor = ThemeHelper.getEffectiveBackgroundColor(ctx)
+
+        val pillColor = if (isDark) {
+            ColorUtils.blendARGB(bgColor, Color.WHITE, 0.18f)
+        } else {
+            ColorUtils.blendARGB(bgColor, Color.GRAY, 0.15f)
+        }
+
+        val lineColor = if (isDark) {
+            ColorUtils.setAlphaComponent(Color.WHITE, 45)
+        } else {
+            ColorUtils.setAlphaComponent(Color.BLACK, 45)
+        }
+
+        dividerRoot.setBackgroundColor(Color.TRANSPARENT)
+        pillCard.setCardBackgroundColor(pillColor)
+        dividerLine.setBackgroundColor(lineColor)
+
+        val primaryColor = ThemeHelper.getPrimaryColor(ctx)
+        dividerBinding.imgSplitHandle.backgroundTintList = ColorStateList.valueOf(primaryColor)
+
+        // Use high-contrast color against pillColor so text and icons are ALWAYS vividly visible
+        val contrastColor = ThemeHelper.getContrastingTextColor(pillColor)
+        dividerBinding.textSplitVersionDivider.setTextColor(contrastColor)
+        dividerBinding.textSplitVersionDivider.compoundDrawableTintList = ColorStateList.valueOf(contrastColor)
+        dividerBinding.btnCloseSplitDivider.setColorFilter(contrastColor)
+        ImageViewCompat.setImageTintList(dividerBinding.imgSplitHandle, ColorStateList.valueOf(contrastColor))
+    }
+
+    private fun setupSplitDividerDragging() {
+        val divider = binding?.layoutSplitDivider?.root ?: return
+        val handle = binding?.layoutSplitDivider?.imgSplitHandle ?: return
+
+        handle.setOnClickListener {
+            viewModel.toggleSplitOrientation()
+        }
+
         var startX = 0f
         var startY = 0f
         var isDragging = false
-        val touchListener = View.OnTouchListener { _, event ->
+
+        divider.setOnTouchListener { v: View, event: MotionEvent ->
+            val isVertical = viewModel.isVerticalSplit.value
+            val container = binding?.layoutBibleContainer ?: return@setOnTouchListener false
+
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     startX = event.rawX
                     startY = event.rawY
                     isDragging = false
+                    true
                 }
-
                 MotionEvent.ACTION_MOVE -> {
-                    val dx = abs(event.rawX - startX)
-                    val dy = abs(event.rawY - startY)
-                    if (dx > 10 || dy > 10) isDragging = true
-                    if (isDragging) {
-                        val container =
-                            binding?.layoutBibleContainer ?: return@OnTouchListener false
-                        val loc = IntArray(2)
-                        container.getLocationOnScreen(loc)
-                        if (viewModel.isVerticalSplit.value) {
-                            val percent = (event.rawX - loc[0]) / container.width.toFloat()
-                            setBibleWeights(
-                                percent.coerceIn(0.15f, 0.85f),
-                                (1f - percent).coerceIn(0.15f, 0.85f),
-                                true
-                            )
-                        } else {
-                            val percent = (event.rawY - loc[1]) / container.height.toFloat()
-                            setBibleWeights(
-                                percent.coerceIn(0.15f, 0.85f),
-                                (1f - percent).coerceIn(0.15f, 0.85f),
-                                false
-                            )
-                        }
+                    val dx = Math.abs(event.rawX - startX)
+                    val dy = Math.abs(event.rawY - startY)
+                    if (!isDragging && (dx > 10 || dy > 10)) {
+                        isDragging = true
                     }
-                }
+                    
+                    if (isDragging) {
+                        val location = IntArray(2)
+                        container.getLocationOnScreen(location)
 
+                        val ratio = if (isVertical) {
+                            val x = event.rawX - location[0]
+                            (x / container.width).coerceIn(0.15f, 0.85f)
+                        } else {
+                            val y = event.rawY - location[1]
+                            (y / container.height).coerceIn(0.15f, 0.85f)
+                        }
+                        viewModel.updateSplitRatio(ratio)
+                    }
+                    true
+                }
                 MotionEvent.ACTION_UP -> {
                     if (!isDragging) {
-                        viewModel.setSplitOrientation(!viewModel.isVerticalSplit.value)
+                        // Check if handle was clicked -> toggle orientation
+                        val handleRect = Rect()
+                        handle.getGlobalVisibleRect(handleRect)
+                        handleRect.inset(-16, -16)
+                        if (handleRect.contains(event.rawX.toInt(), event.rawY.toInt())) {
+                            viewModel.toggleSplitOrientation()
+                        } else {
+                            // Check if close button was clicked
+                            val closeBtn = binding?.layoutSplitDivider?.btnCloseSplitDivider
+                            val closeRect = Rect()
+                            closeBtn?.getGlobalVisibleRect(closeRect)
+                            closeRect.inset(-16, -16)
+                            if (closeBtn != null && closeRect.contains(event.rawX.toInt(), event.rawY.toInt())) {
+                                viewModel.setSplitMode(false)
+                            } else {
+                                // Check if version text was clicked
+                                val versionText = binding?.layoutSplitDivider?.textSplitVersionDivider
+                                val vRect = Rect()
+                                versionText?.getGlobalVisibleRect(vRect)
+                                vRect.inset(-16, -16)
+                                if (versionText != null && vRect.contains(event.rawX.toInt(), event.rawY.toInt())) {
+                                    (activity as? MainActivity)?.showSplitVersionSelectionDialog()
+                                }
+                            }
+                        }
                     }
+                    true
                 }
+                else -> false
             }
-            true
         }
-
-        binding?.splitHandle?.setOnTouchListener(touchListener)
-        binding?.splitDividerLine?.setOnTouchListener(touchListener)
-    }
-
-    private fun setBibleWeights(w1: Float, w2: Float, isVertical: Boolean) {
-        val rv1 = binding?.recyclerviewBible ?: return
-        val rv2 = binding?.recyclerviewBibleSplit ?: return
-        val lp1 = rv1.layoutParams as LinearLayout.LayoutParams
-        val lp2 = rv2.layoutParams as LinearLayout.LayoutParams
-        lp1.width = if (isVertical) 0 else ViewGroup.LayoutParams.MATCH_PARENT
-        lp1.height = if (isVertical) ViewGroup.LayoutParams.MATCH_PARENT else 0
-        lp1.weight = w1
-        lp2.width = if (isVertical) 0 else ViewGroup.LayoutParams.MATCH_PARENT
-        lp2.height = if (isVertical) ViewGroup.LayoutParams.MATCH_PARENT else 0
-        lp2.weight = w2
-        rv1.layoutParams = lp1
-        rv2.layoutParams = lp2
     }
 
     private fun showBottomBarAndResetTimer(durationMs: Long = 3000L) {
@@ -1272,6 +1486,7 @@ class TransformFragment : Fragment() {
             bookmarkBinding.colorPurple to ThemeHelper.BOOKMARK_PURPLE
         )
 
+        val selectedStrokeColor = ThemeHelper.getBookmarkSelectedStrokeColor(requireContext())
         fun updateSelectedSwatch(colorHex: String) {
             selectedColor = colorHex
             colorViews.forEach { pair ->
@@ -1286,7 +1501,8 @@ class TransformFragment : Fragment() {
                     (colorHex.equals("#FFE082", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_YELLOW) ||
                     (colorHex.equals("#9C27B0", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_PURPLE) ||
                     (colorHex.equals("#CE93D8", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_PURPLE)
-                pair.first.strokeColor = if (matches) Color.BLACK else Color.TRANSPARENT
+                pair.first.strokeColor = if (matches) selectedStrokeColor else Color.TRANSPARENT
+                pair.first.strokeWidth = if (matches) (3f * resources.displayMetrics.density).toInt() else 0
             }
         }
         updateSelectedSwatch(selectedColor)
@@ -1363,9 +1579,9 @@ class TransformFragment : Fragment() {
             }
             dialog.dismiss()
         }
-        ThemeHelper.applyThemeToView(requireContext(), bookmarkBinding.root)
+        ThemeHelper.applyBookmarkDialogTheme(bookmarkBinding, requireContext())
         dialog.show()
-        (activity as? MainActivity)?.limitDialogWidth(dialog)
+        (activity as? MainActivity)?.limitDialogWidth(dialog, true)
     }
 
     private fun bookmarkSelectedVerses() = showBookmarkDialog(selectedVersesList.toList())

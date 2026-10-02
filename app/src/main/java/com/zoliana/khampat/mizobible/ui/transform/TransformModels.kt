@@ -6,7 +6,7 @@ data class FontSettings(
     val isBold: Boolean = false,
     val isItalic: Boolean = false,
     val letterSpacing: Float = 0f,
-    val lineHeight: Float = 1.3f,
+    val lineHeight: Float = 0.20f,
     val fontColor: String = ""
 )
 

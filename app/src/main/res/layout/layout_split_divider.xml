@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/layout_split_divider_root"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:clipChildren="false"
+    android:clipToPadding="false">
+
+    <!-- Divider Line (horizontal in top/bottom split, vertical in side-by-side split) -->
+    <View
+        android:id="@+id/view_split_divider_line"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_gravity="center"
+        android:background="#33888888" />
+
+    <!-- Draggable Central Pill Container -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/card_split_pill"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        app:cardBackgroundColor="#2C3E50"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="3dp"
+        app:strokeWidth="0dp">
+
+        <LinearLayout
+            android:id="@+id/layout_split_pill_content"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="3dp">
+
+            <!-- Drag / Orientation Toggle Handle (Left in horizontal, Top in vertical) -->
+            <ImageView
+                android:id="@+id/img_split_handle"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Resize or rotate split view"
+                android:padding="2dp"
+                android:src="@drawable/ic_unfold_more_24"
+                app:tint="#FFFFFF" />
+
+            <!-- Split Bible Version Badge / Selector (Middle) -->
+            <TextView
+                android:id="@+id/text_split_version_divider"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="6dp"
+                android:background="?attr/selectableItemBackground"
+                android:gravity="center"
+                android:maxLines="1"
+                android:singleLine="true"
+                android:minHeight="24dp"
+                android:paddingHorizontal="5dp"
+                android:paddingVertical="2dp"
+                android:text="MzCL"
+                android:textColor="#FFFFFF"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                app:drawableEndCompat="@drawable/ic_arrow_drop_down_24"
+                app:drawableTint="#FFFFFF"
+                tools:text="MzCL" />
+
+            <!-- Close Split View Button (Right in horizontal, Bottom in vertical) -->
+            <ImageView
+                android:id="@+id/btn_close_split_divider"
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Close split view"
+                android:padding="2dp"
+                android:src="@drawable/ic_close_24"
+                app:tint="#FFFFFF" />
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+</FrameLayout>

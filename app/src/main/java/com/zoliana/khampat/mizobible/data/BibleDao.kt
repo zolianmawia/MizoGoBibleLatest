@@ -19,7 +19,7 @@ interface BibleDao {
         WHERE (LOWER(TRIM(type)) = LOWER(TRIM(:version)) 
         OR (LOWER(TRIM(:version)) IN ('mzov', 'mgb', 'verse', 'mizogobible', 'mizo bible', 'mizo go bible') 
             AND (LOWER(TRIM(type)) = 'mzov' OR LOWER(TRIM(type)) IN ('pericope', 'percope', 'verse', 'mgb', 'mizogobible')))) 
-        AND book = :bookName AND chapter = :chapterNumber 
+        AND LOWER(TRIM(book)) = LOWER(TRIM(:bookName)) AND chapter = :chapterNumber 
         ORDER BY id ASC
     """
     )
@@ -31,7 +31,7 @@ interface BibleDao {
         WHERE (LOWER(TRIM(type)) = LOWER(TRIM(:version)) 
         OR (LOWER(TRIM(:version)) IN ('mzov', 'mgb', 'verse', 'mizogobible', 'mizo bible', 'mizo go bible') 
             AND (LOWER(TRIM(type)) = 'mzov' OR LOWER(TRIM(type)) IN ('pericope', 'percope', 'verse', 'mgb', 'mizogobible')))) 
-        AND book = :bookName AND chapter = :chapterNumber 
+        AND LOWER(TRIM(book)) = LOWER(TRIM(:bookName)) AND chapter = :chapterNumber 
         ORDER BY id ASC
     """
     )
@@ -62,7 +62,7 @@ interface BibleDao {
         WHERE (LOWER(TRIM(type)) = LOWER(TRIM(:version)) 
         OR (LOWER(TRIM(:version)) IN ('mzov', 'mgb', 'verse', 'mizogobible', 'mizo bible', 'mizo go bible') 
             AND (LOWER(TRIM(type)) = 'mzov' OR LOWER(TRIM(type)) IN ('pericope', 'percope', 'verse', 'mgb', 'mizogobible')))) 
-        AND book = :bookName
+        AND LOWER(TRIM(book)) = LOWER(TRIM(:bookName))
     """
     )
     suspend fun getChapterCountSync(version: String, bookName: String): Int?
@@ -73,7 +73,7 @@ interface BibleDao {
         WHERE (LOWER(TRIM(type)) = LOWER(TRIM(:version)) 
         OR (LOWER(TRIM(:version)) IN ('mzov', 'mgb', 'verse', 'mizogobible', 'mizo bible', 'mizo go bible') 
             AND (LOWER(TRIM(type)) = 'mzov' OR LOWER(TRIM(type)) IN ('pericope', 'percope', 'verse', 'mgb', 'mizogobible')))) 
-        AND book = :bookName
+        AND LOWER(TRIM(book)) = LOWER(TRIM(:bookName))
     """
     )
     fun getChapterCount(version: String, bookName: String): Flow<Int?>
@@ -94,7 +94,7 @@ interface BibleDao {
         WHERE (LOWER(TRIM(type)) = LOWER(TRIM(:version)) 
         OR (LOWER(TRIM(:version)) IN ('mzov', 'mgb', 'verse', 'mizogobible', 'mizo bible', 'mizo go bible') 
             AND (LOWER(TRIM(type)) = 'mzov' OR LOWER(TRIM(type)) IN ('pericope', 'percope', 'verse', 'mgb', 'mizogobible')))) 
-        AND book = :bookName AND chapter = :chapter
+        AND LOWER(TRIM(book)) = LOWER(TRIM(:bookName)) AND chapter = :chapter
     """
     )
     suspend fun getVerseCountSync(version: String, bookName: String, chapter: Int): Int
@@ -278,7 +278,7 @@ interface BibleDao {
         WHERE (LOWER(TRIM(type)) = LOWER(TRIM(:version)) 
         OR (LOWER(TRIM(:version)) IN ('mzov', 'mgb', 'verse', 'mizogobible', 'mizo bible', 'mizo go bible') 
             AND (LOWER(TRIM(type)) = 'mzov' OR LOWER(TRIM(type)) IN ('pericope', 'percope', 'verse', 'mgb', 'mizogobible')))) 
-        AND book = :bookName AND chapter = :chapter AND verse = :verse
+        AND LOWER(TRIM(book)) = LOWER(TRIM(:bookName)) AND chapter = :chapter AND verse = :verse
         LIMIT 1
     """
     )
@@ -287,7 +287,7 @@ interface BibleDao {
     @Query("SELECT book FROM mizogobible LIMIT 1")
     suspend fun getFirstBookName(): String?
 
-    @Query("SELECT * FROM mizogobible WHERE book = :bookName AND chapter = :chapterNumber ORDER BY id ASC")
+    @Query("SELECT * FROM mizogobible WHERE LOWER(TRIM(book)) = LOWER(TRIM(:bookName)) AND chapter = :chapterNumber ORDER BY id ASC")
     fun getVersesByBookAndChapter(bookName: String, chapterNumber: Int): Flow<List<BibleVerse>>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)

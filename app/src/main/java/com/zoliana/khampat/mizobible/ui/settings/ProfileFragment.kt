@@ -150,6 +150,8 @@ class ProfileFragment : Fragment() {
         binding?.btnAdminActivatePatron?.setOnClickListener { performAdminActivation(MembershipType.SILVER) }
         binding?.btnAdminActivateLive?.setOnClickListener { performAdminActivation(MembershipType.GOLD) }
         binding?.btnAdminDeactivate?.setOnClickListener { performManualDeactivation() }
+        
+        binding?.btnActivatePremiumKey?.setOnClickListener { showPremiumKeyDialog() }
 
         binding?.layoutPinsStats?.setOnClickListener { findNavController().navigate(R.id.nav_pin) }
         binding?.layoutBookmarksStats?.setOnClickListener { findNavController().navigate(R.id.nav_bookmark) }
@@ -168,6 +170,7 @@ class ProfileFragment : Fragment() {
                     binding?.imgGoldBadge?.visibility = if (type == MembershipType.GOLD) View.VISIBLE else View.GONE
                     binding?.imgSilverBadge?.visibility = if (type == MembershipType.SILVER) View.VISIBLE else View.GONE
                     binding?.layoutMembershipOptions?.visibility = if (type == MembershipType.FREE) View.VISIBLE else View.GONE
+                    binding?.btnActivatePremiumKey?.visibility = if (type == MembershipType.FREE && auth.currentUser != null) View.VISIBLE else View.GONE
                 }
             }
         }
@@ -382,6 +385,42 @@ class ProfileFragment : Fragment() {
         (activity as? MainActivity)?.limitDialogWidth(dialog)
     }
 
+    private fun showPremiumKeyDialog() {
+        val input = EditText(requireContext()).apply {
+            hint = "MGB-XXXX-XXXX"
+            setPadding(50, 40, 50, 40)
+        }
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Enter Premium Key")
+            .setMessage("I key neih kha helai hmunah hian thun rawh le.")
+            .setView(input)
+            .setPositiveButton("Activate") { _, _ ->
+                val key = input.text.toString().trim().uppercase()
+                if (key == "MGB-PREMIUM-2025") {
+                    viewModel.setMembership(MembershipType.GOLD)
+                    showPremiumSuccessUI(MembershipType.GOLD)
+                } else {
+                    Toast.makeText(context, "Key a dik lo! Admin be rawh.", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
+        (activity as? MainActivity)?.limitDialogWidth(dialog)
+    }
+
+    private fun showUpgradeDialog() {
+        if (!isAdded) return
+        val dialog = MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Limit Tling Ta! ⚠️")
+            .setMessage("Free member tan chuan Pin/Note/Bookmark hi 10 chauh dah phal a ni e. I duh belh chuan Upgrade rawh le.")
+            .setPositiveButton("Upgrade") { _, _ ->
+                binding?.root?.smoothScrollTo(0, binding?.layoutMembershipOptions?.top ?: 0)
+            }
+            .setNegativeButton("Awle", null)
+            .show()
+        (activity as? MainActivity)?.limitDialogWidth(dialog)
+    }
+
     fun showPremiumSuccessUI(type: MembershipType? = null) {
         viewModel.syncFromCloud()
         val currentType = type ?: viewModel.membershipType.value
@@ -400,7 +439,7 @@ class ProfileFragment : Fragment() {
             binding?.layoutNotLoggedIn?.visibility = View.GONE
             binding?.layoutProfile?.visibility = View.VISIBLE
             binding?.textUserName?.text = user.displayName ?: "User"
-            binding?.textUserId?.text = user.email ?: ""
+            binding?.textUserId?.text = if (user.email?.lowercase()?.trim() == ADMIN_EMAIL.lowercase()) "Logged in as Admin 👑" else user.email ?: ""
             binding?.textProfileInitial?.text = (user.displayName ?: "U").first().toString().uppercase()
             if (user.photoUrl != null) {
                 binding?.imgProfile?.let { imgView ->

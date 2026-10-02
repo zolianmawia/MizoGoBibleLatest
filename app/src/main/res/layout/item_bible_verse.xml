@@ -4,8 +4,10 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingHorizontal="6dp"
-    android:paddingVertical="2dp">
+    android:paddingHorizontal="4dp"
+    android:paddingVertical="1.5dp"
+    android:clipChildren="false"
+    android:clipToPadding="false">
 
     <LinearLayout
         android:id="@+id/layout_verse_main"

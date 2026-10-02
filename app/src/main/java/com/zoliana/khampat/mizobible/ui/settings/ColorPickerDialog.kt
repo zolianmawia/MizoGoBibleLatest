@@ -11,6 +11,7 @@ import android.view.ViewGroup
 import android.view.Window
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.zoliana.khampat.mizobible.databinding.DialogColorPickerBinding
+import com.zoliana.khampat.mizobible.utils.ThemeHelper
 
 class ColorPickerDialog(
     context: Context,
@@ -86,6 +87,9 @@ class ColorPickerDialog(
         updateColorDisplay()
 
         // 6. Action buttons
+        val isPickerDark = ThemeHelper.isCurrentThemeDark(context)
+        val cancelColor = if (isPickerDark) Color.parseColor("#E0E0E0") else Color.parseColor("#374151")
+        binding.btnPickerCancel.setTextColor(cancelColor)
         binding.btnPickerClose.setOnClickListener { dismiss() }
         binding.btnPickerCancel.setOnClickListener { dismiss() }
         binding.btnPickerSelect.setOnClickListener {

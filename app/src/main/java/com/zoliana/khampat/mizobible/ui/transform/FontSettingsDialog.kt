@@ -107,16 +107,18 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
             }
         }
         binding.sliderLetterSpacing.addOnChangeListener { _, value, _ ->
+            val cleanVal = (value * 100f).roundToInt() / 100f
             updateSettings {
                 it.copy(
-                    letterSpacing = value
+                    letterSpacing = cleanVal
                 )
             }
         }
         binding.sliderLineHeight.addOnChangeListener { _, value, _ ->
+            val cleanVal = (value * 100f).roundToInt() / 100f
             updateSettings {
                 it.copy(
-                    lineHeight = value
+                    lineHeight = cleanVal
                 )
             }
         }
@@ -130,24 +132,26 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
 
         binding.btnFontColorPicker?.setOnClickListener {
             val isDark = ThemeHelper.isCurrentThemeDark(requireContext())
+            val opacity = ThemeHelper.getThemeOpacity(requireContext())
+            val allowWhite = isDark || opacity >= 0.45f
             val currentHex = if (viewModel.fontSettings.value.fontColor.startsWith("#")) {
                 viewModel.fontSettings.value.fontColor
-            } else if (isDark) "#FFFFFF" else "#000000"
+            } else if (allowWhite) "#FFFFFF" else "#000000"
 
             ColorPickerDialog(
                 context = requireContext(),
                 initialColorHex = currentHex,
-                title = if (isDark) "Font Color (A var/eng lam)" else "Font Color (A fiah/thim lam)"
+                title = if (allowWhite) "Font Color (A var/eng lam)" else "Font Color"
             ) { hex ->
                 val chosenColor = try { Color.parseColor(hex) } catch (_: Exception) { null }
                 if (chosenColor != null) {
                     val isColorDark = ThemeHelper.isColorDark(chosenColor)
-                    if (isDark && isColorDark) {
+                    if (isDark && isColorDark && opacity < 0.5f) {
                         Toast.makeText(requireContext(), "Dark mode-ah chuan rawng eng/var lam chi chauh a fiah e", Toast.LENGTH_SHORT).show()
                         return@ColorPickerDialog
                     }
-                    if (!isDark && !isColorDark) {
-                        Toast.makeText(requireContext(), "Light mode-ah chuan rawng fiah/thim lam chi chauh hman theih a ni e", Toast.LENGTH_SHORT).show()
+                    if (!isDark && !isColorDark && opacity < 0.45f) {
+                        Toast.makeText(requireContext(), "Theme Color a la en lutuk a ni. Settings-ah Theme Color ti tak (50% aia tam) pawt phei la, fonts var hman theih a ni ang.", Toast.LENGTH_LONG).show()
                         return@ColorPickerDialog
                     }
                 }
@@ -180,7 +184,8 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
 
         val steps = ((clamped - from) / step).roundToInt()
         val snapped = from + (steps * step)
-        return snapped.coerceIn(from, to)
+        val cleanSnapped = (snapped * 1000f).roundToInt() / 1000f
+        return cleanSnapped.coerceIn(from, to)
     }
 
     private fun setupFontList(currentFont: String) {
@@ -209,12 +214,13 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
     private fun setupFontColorList(currentColor: String) {
         val context = requireContext()
         val isDark = ThemeHelper.isCurrentThemeDark(context)
+        val opacity = ThemeHelper.getThemeOpacity(context)
         val availableOptions = ThemeHelper.getAvailableFontColors(context)
 
-        binding.textFontColorSectionTitle?.text = if (isDark) {
-            "Font Color (Dark Mode - A var lam chi chauh)"
+        binding.textFontColorSectionTitle?.text = if (isDark || opacity >= 0.45f) {
+            "Font Color (A var / eng lam chi)"
         } else {
-            "Font Color (Light Mode - A fiah lam chi chauh)"
+            "Font Color (A fiah / thim lam chi)"
         }
 
         val swatchItems = availableOptions.map { option ->
@@ -337,8 +343,12 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
         val b = _binding ?: return
         b.textFontSizeVal.text = settings.fontSize.toInt().toString()
         b.textPaddingVal.text = padding.toInt().toString()
-        b.textLetterSpacingVal.text = String.format(java.util.Locale.US, "%.2f", settings.letterSpacing)
-        b.textLineHeightVal.text = String.format(java.util.Locale.US, "%.2f", settings.lineHeight)
+
+        val displayLetterSpacing = if (kotlin.math.abs(settings.letterSpacing) < 0.001f) 0.0f else settings.letterSpacing
+        b.textLetterSpacingVal.text = String.format(java.util.Locale.US, "%.2f", displayLetterSpacing)
+
+        val displayLineHeight = if (kotlin.math.abs(settings.lineHeight) < 0.001f) 0.0f else settings.lineHeight
+        b.textLineHeightVal.text = String.format(java.util.Locale.US, "%.2f", displayLineHeight)
 
         if (settings.isBold) {
             b.btnBold.setIconResource(R.drawable.ic_check_24)
@@ -363,8 +373,9 @@ class FontSettingsDialog : BottomSheetDialogFragment() {
         b.textPreview.setTextSize(TypedValue.COMPLEX_UNIT_SP, settings.fontSize)
         b.textPreview.letterSpacing = settings.letterSpacing
         val density = resources.displayMetrics.density
-        val mult = if (settings.lineHeight <= 1.05f) 1.28f else settings.lineHeight
-        b.textPreview.setLineSpacing((2 * density), mult)
+        val mult = (1.0f + settings.lineHeight * 0.7f).coerceIn(0.65f, 2.5f)
+        val add = (settings.lineHeight * 2f * density).coerceIn(-3f * density, 6f * density)
+        b.textPreview.setLineSpacing(add, mult)
 
         val effectiveVerseBg = ThemeHelper.getEffectiveToolbarColor(ctx)
         val effectiveCardBg = ThemeHelper.getEffectiveCardColor(ctx) ?: effectiveVerseBg

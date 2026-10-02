@@ -511,7 +511,7 @@ class SlideshowFragment : Fragment() {
     private fun showBookmarkActionPopup(item: BookmarkTreeItem.VerseChild) {
         val popupBinding = DialogBookmarkActionsBinding.inflate(layoutInflater)
         val dialog = AlertDialog.Builder(requireContext()).setView(popupBinding.root).create()
-        ThemeHelper.applyThemeToView(requireContext(), popupBinding.root)
+        ThemeHelper.applyBookmarkActionPopupTheme(popupBinding, requireContext())
 
         popupBinding.textActionReference.text = item.displayReference
         val snippet = if (item.bookmarks.size == 1) {
@@ -530,6 +530,7 @@ class SlideshowFragment : Fragment() {
             popupBinding.colorPurple to ThemeHelper.BOOKMARK_PURPLE
         )
 
+        val selectedStrokeColor = ThemeHelper.getBookmarkSelectedStrokeColor(requireContext())
         fun updateColorSelection(selected: String) {
             currentColor = selected
             colorViews.forEach { (view, hex) ->
@@ -544,7 +545,8 @@ class SlideshowFragment : Fragment() {
                     (selected.equals("#FFE082", ignoreCase = true) && hex == ThemeHelper.BOOKMARK_YELLOW) ||
                     (selected.equals("#9C27B0", ignoreCase = true) && hex == ThemeHelper.BOOKMARK_PURPLE) ||
                     (selected.equals("#CE93D8", ignoreCase = true) && hex == ThemeHelper.BOOKMARK_PURPLE)
-                view.strokeColor = if (matches) Color.BLACK else Color.TRANSPARENT
+                view.strokeColor = if (matches) selectedStrokeColor else Color.TRANSPARENT
+                view.strokeWidth = if (matches) (3f * resources.displayMetrics.density).toInt() else 0
             }
         }
         updateColorSelection(currentColor)
@@ -588,7 +590,6 @@ class SlideshowFragment : Fragment() {
     private fun showEditGroupTitleDialog(header: BookmarkTreeItem.GroupHeader) {
         val dialogBinding = DialogBookmarkBinding.inflate(layoutInflater)
         val dialog = AlertDialog.Builder(requireContext()).setView(dialogBinding.root).create()
-        ThemeHelper.applyThemeToView(requireContext(), dialogBinding.root)
 
         dialogBinding.textBookmarkReference.text = "Date: ${header.dateStr} (${header.count})"
         dialogBinding.editBookmarkTitle.setText(header.title)
@@ -615,6 +616,7 @@ class SlideshowFragment : Fragment() {
             dialogBinding.colorRed to ThemeHelper.BOOKMARK_RED,
             dialogBinding.colorPurple to ThemeHelper.BOOKMARK_PURPLE
         )
+        val selectedStrokeColor1 = ThemeHelper.getBookmarkSelectedStrokeColor(requireContext())
         fun updateSwatchSelection(colorHex: String) {
             selectedColor = colorHex
             colorViews.forEach { pair ->
@@ -629,7 +631,8 @@ class SlideshowFragment : Fragment() {
                     (colorHex.equals("#FFE082", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_YELLOW) ||
                     (colorHex.equals("#9C27B0", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_PURPLE) ||
                     (colorHex.equals("#CE93D8", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_PURPLE)
-                pair.first.strokeColor = if (matches) Color.BLACK else Color.TRANSPARENT
+                pair.first.strokeColor = if (matches) selectedStrokeColor1 else Color.TRANSPARENT
+                pair.first.strokeWidth = if (matches) (3f * resources.displayMetrics.density).toInt() else 0
             }
         }
         updateSwatchSelection(selectedColor)
@@ -650,14 +653,14 @@ class SlideshowFragment : Fragment() {
             }
             dialog.dismiss()
         }
+        ThemeHelper.applyBookmarkDialogTheme(dialogBinding, requireContext())
         dialog.show()
-        (activity as? MainActivity)?.limitDialogWidth(dialog)
+        (activity as? MainActivity)?.limitDialogWidth(dialog, true)
     }
 
     private fun showEditBookmarkDialog(item: BookmarkTreeItem.VerseChild) {
         val dialogBinding = DialogBookmarkBinding.inflate(layoutInflater)
         val dialog = AlertDialog.Builder(requireContext()).setView(dialogBinding.root).create()
-        ThemeHelper.applyThemeToView(requireContext(), dialogBinding.root)
         dialogBinding.textBookmarkReference.text = item.displayReference
         dialogBinding.editBookmarkTitle.setText(item.title)
         dialogBinding.editBookmarkNote.setText(item.note)
@@ -684,6 +687,7 @@ class SlideshowFragment : Fragment() {
             dialogBinding.colorRed to ThemeHelper.BOOKMARK_RED,
             dialogBinding.colorPurple to ThemeHelper.BOOKMARK_PURPLE
         )
+        val selectedStrokeColor2 = ThemeHelper.getBookmarkSelectedStrokeColor(requireContext())
         fun updateSwatchSelection(colorHex: String) {
             selectedColor = colorHex
             colorViews.forEach { pair ->
@@ -698,7 +702,8 @@ class SlideshowFragment : Fragment() {
                     (colorHex.equals("#FFE082", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_YELLOW) ||
                     (colorHex.equals("#9C27B0", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_PURPLE) ||
                     (colorHex.equals("#CE93D8", ignoreCase = true) && pair.second == ThemeHelper.BOOKMARK_PURPLE)
-                pair.first.strokeColor = if (matches) Color.BLACK else Color.TRANSPARENT
+                pair.first.strokeColor = if (matches) selectedStrokeColor2 else Color.TRANSPARENT
+                pair.first.strokeWidth = if (matches) (3f * resources.displayMetrics.density).toInt() else 0
             }
         }
         updateSwatchSelection(selectedColor)
@@ -719,8 +724,9 @@ class SlideshowFragment : Fragment() {
             }
             dialog.dismiss()
         }
+        ThemeHelper.applyBookmarkDialogTheme(dialogBinding, requireContext())
         dialog.show()
-        (activity as? MainActivity)?.limitDialogWidth(dialog)
+        (activity as? MainActivity)?.limitDialogWidth(dialog, true)
     }
 
     private fun isOldTestament(book: String): Boolean {
